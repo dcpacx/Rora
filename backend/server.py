@@ -120,8 +120,8 @@ class OrderCreate(BaseModel):
     items: List[OrderItem]
     address: Address
     paymentMethod: Literal['cod', 'bkash', 'nagad']
-    paymentPhone: Optional[str] = None
-    paymentTxn: Optional[str] = None
+    paymentPhone: Optional[str] = None  # sender mobile for bkash/nagad
+    paymentTxn: Optional[str] = None    # transaction id entered by user
     subtotal: float
     delivery: float
     total: float
@@ -141,6 +141,21 @@ class CategoryUpsert(BaseModel):
     name: str
     icon: str = 'Leaf'
     image: Optional[str] = None
+
+class PaymentSettings(BaseModel):
+    bkashNumber: str = ''
+    nagadNumber: str = ''
+    bkashType: str = 'personal'  # personal / merchant / agent
+    nagadType: str = 'personal'
+    instructions: str = ''
+
+class ManualPaymentInfo(BaseModel):
+    senderPhone: str
+    txnId: str
+
+class PaymentVerifyAdmin(BaseModel):
+    status: Literal['paid', 'rejected']
+    note: Optional[str] = None
 
 class PaymentInitiate(BaseModel):
     method: Literal['bkash', 'nagad']
@@ -229,7 +244,7 @@ async def signup(body: UserSignup):
         'createdAt': datetime.utcnow().isoformat(),
     }
     await db.users.insert_one(user)
-    await push_notification(user['id'], 'Welcome to Sobuj! 🌱', 'Thanks for joining. Get ৳100 off your first order with code SOBUJ100.', 'system')
+    await push_notification(user['id'], 'স্বাগতম! 🌱', 'প্রকৃতির ঘ্রাণে যোগ দেওয়ার জন্য ধন্যবাদ। আপনার প্রথম অর্ডারে ৳১০০ ছাড় পেতে কোড SOBUJ100 ব্যবহার করুন।', 'system')
     token = create_token(user['id'], 'customer')
     return {'token': token, 'user': {'id': user['id'], 'name': user['name'], 'email': user['email'], 'phone': user['phone'], 'role': user['role'], 'avatar': user.get('avatar')}}
 
@@ -346,6 +361,44 @@ async def admin_send(body: AdminMessageCreate, admin = Depends(get_admin)):
 async def admin_unread(admin = Depends(get_admin)):
     c = await db.messages.count_documents({'fromAdmin': False, 'read': False})
     return {'count': c}
+
+
+# Payment settings (public for storefront to read, admin for write)
+@api.get('/settings/payment')
+async def get_payment_settings():
+    s = await db.settings.find_one({'key': 'payment'})
+    if not s:
+        return {'bkashNumber': '', 'nagadNumber': '', 'bkashType': 'personal', 'nagadType': 'personal', 'instructions': ''}
+    s.pop('_id', None); s.pop('key', None)
+    return s
+
+@api.put('/admin/settings/payment')
+async def update_payment_settings(body: PaymentSettings, admin = Depends(get_admin)):
+    data = body.model_dump()
+    await db.settings.update_one({'key': 'payment'}, {'$set': {**data, 'key': 'payment'}}, upsert=True)
+    return data
+
+
+# Admin: verify or reject a manual bKash/Nagad payment
+@api.patch('/admin/orders/{order_id}/payment')
+async def admin_verify_payment(order_id: str, body: PaymentVerifyAdmin, admin = Depends(get_admin)):
+    o = await db.orders.find_one({'id': order_id})
+    if not o: raise HTTPException(404, 'Order not found')
+    if o.get('paymentMethod') == 'cod':
+        raise HTTPException(400, 'COD orders do not need payment verification')
+    new_payment_status = body.status
+    new_order_status = 'confirmed' if body.status == 'paid' else o.get('status', 'pending')
+    update = {'paymentStatus': new_payment_status, 'paymentNote': body.note, 'status': new_order_status}
+    await db.orders.update_one({'id': order_id}, {'$set': update})
+    if body.status == 'paid':
+        title = f"পেমেন্ট কনফার্ম · {o['orderNo']}"
+        msg = f"আপনার ৳{o['total']:.0f} পেমেন্ট ভেরিফাই করা হয়েছে। শীঘ্রই অর্ডার ডেলিভার করা হবে।"
+    else:
+        title = f"পেমেন্ট সমস্যা · {o['orderNo']}"
+        msg = body.note or 'আপনার পেমেন্ট ভেরিফাই করা যায়নি। ট্রানজেকশন আইডি চেক করে আবার চেষ্টা করুন।'
+    await push_notification(o['userId'], title, msg, 'order', order_id)
+    o = await db.orders.find_one({'id': order_id}); o.pop('_id', None)
+    return o
 
 
 # Categories
@@ -470,6 +523,10 @@ async def payment_verify(body: PaymentVerify):
 # Orders
 @api.post('/orders')
 async def create_order(body: OrderCreate, user = Depends(get_current_user)):
+    # For bKash/Nagad — payment is verified manually by admin; require txn id
+    if body.paymentMethod in ('bkash', 'nagad'):
+        if not body.paymentPhone or not body.paymentTxn:
+            raise HTTPException(400, 'Sender phone and transaction ID required for bKash/Nagad')
     order = {
         'id': str(uuid.uuid4()),
         'orderNo': f"ORD-{datetime.utcnow().strftime('%y%m%d')}-{random.randint(1000, 9999)}",
@@ -481,15 +538,22 @@ async def create_order(body: OrderCreate, user = Depends(get_current_user)):
         'paymentMethod': body.paymentMethod,
         'paymentPhone': body.paymentPhone,
         'paymentTxn': body.paymentTxn,
+        'paymentNote': None,
         'subtotal': body.subtotal,
         'delivery': body.delivery,
         'total': body.total,
-        'status': 'confirmed' if body.paymentMethod != 'cod' else 'pending',
-        'paymentStatus': 'paid' if body.paymentMethod != 'cod' else 'unpaid',
+        # COD: pending order, unpaid (collect cash on delivery)
+        # bKash/Nagad: pending order, pending payment verification by admin
+        'status': 'pending',
+        'paymentStatus': 'unpaid' if body.paymentMethod == 'cod' else 'pending',
         'createdAt': datetime.utcnow().isoformat(),
     }
     await db.orders.insert_one(order)
-    await push_notification(user['id'], f"Order placed · {order['orderNo']}", f"Your order of ৳{order['total']:.0f} has been received. We'll update you as it progresses.", 'order', order['id'])
+    if body.paymentMethod == 'cod':
+        msg = f"আপনার অর্ডার ৳{order['total']:.0f} গ্রহণ করা হয়েছে। ডেলিভারির সময় ক্যাশ পেমেন্ট করুন।"
+    else:
+        msg = f"আপনার অর্ডার ৳{order['total']:.0f} গ্রহণ করা হয়েছে। পেমেন্ট ভেরিফিকেশন বাকি — আমরা শীঘ্রই কনফার্ম করব।"
+    await push_notification(user['id'], f"অর্ডার গৃহীত · {order['orderNo']}", msg, 'order', order['id'])
     order.pop('_id', None)
     return order
 
@@ -731,6 +795,18 @@ async def seed():
                 'createdAt': datetime.utcnow().isoformat(),
             })
         logging.info('Seeded products')
+
+    # Settings — default placeholder payment numbers (admin should update)
+    if not await db.settings.find_one({'key': 'payment'}):
+        await db.settings.insert_one({
+            'key': 'payment',
+            'bkashNumber': '01711-000000',
+            'nagadNumber': '01711-000000',
+            'bkashType': 'personal',
+            'nagadType': 'personal',
+            'instructions': 'অনুগ্রহ করে উপরের নম্বরে সঠিক পরিমাণ Send Money করুন এবং সফল হলে ট্রানজেকশন আইডি (TrxID) লিখুন। আমরা ১৫–৩০ মিনিটে যাচাই করে কনফার্ম করব।',
+        })
+        logging.info('Seeded payment settings')
 
 
 app.include_router(api)

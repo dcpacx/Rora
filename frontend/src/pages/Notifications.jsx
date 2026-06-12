@@ -26,7 +26,14 @@ const timeAgo = (iso) => {
 
 const NotificationsPage = () => {
   const { user } = useAuth();
-  const { items, loading, markRead, markAllRead, unread } = useNotifications();
+  const { items, loading, markRead, markAllRead, unread, refresh } = useNotifications();
+
+  // When user views the notifications page, mark all as read so badge clears
+  React.useEffect(() => {
+    if (user && unread > 0) markAllRead();
+    refresh();
+    // eslint-disable-next-line
+  }, [user]);
 
   if (!user) {
     return (

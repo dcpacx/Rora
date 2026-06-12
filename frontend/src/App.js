@@ -1,7 +1,7 @@
 import React from 'react';
 import './App.css';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { NotifProvider } from './contexts/NotifContext';
 import { Protected } from './components/Protected';
@@ -15,11 +15,13 @@ import ProductPage from './pages/Product';
 import CartPage from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
 import Profile from './pages/Profile';
 import EditProfile from './pages/EditProfile';
 import Search from './pages/Search';
 import Notifications from './pages/Notifications';
 import Messages from './pages/Messages';
+import AdminLogin from './pages/AdminLogin';
 import { Login, Signup } from './pages/Auth';
 import { AdminLayout, AdminDashboard } from './pages/admin/Dashboard';
 import AdminProducts from './pages/admin/Products';
@@ -28,8 +30,21 @@ import AdminUsers from './pages/admin/Users';
 import AdminCategoriesPage from './pages/admin/Categories';
 import AdminAnalytics from './pages/admin/Analytics';
 import AdminMessages from './pages/admin/Messages';
+import AdminSettings from './pages/admin/Settings';
 import { Toaster } from './components/ui/toaster';
 import { ADMIN_PATH } from './lib/admin-path';
+import { Leaf } from 'lucide-react';
+
+const AdminGate = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return (
+    <div className="min-h-screen grid place-items-center bg-neutral-950">
+      <div className="text-emerald-400 flex items-center gap-2 text-sm"><Leaf className="w-4 h-4 animate-pulse" /> Loading…</div>
+    </div>
+  );
+  if (!user || user.role !== 'admin') return <AdminLogin />;
+  return children;
+};
 
 const Shell = ({ children }) => {
   const { pathname } = useLocation();
@@ -50,7 +65,7 @@ const AppRoutes = () => {
   if (pathname.startsWith(ADMIN_PATH)) {
     return (
       <Routes>
-        <Route path={ADMIN_PATH} element={<Protected adminOnly><AdminLayout /></Protected>}>
+        <Route path={ADMIN_PATH} element={<AdminGate><AdminLayout /></AdminGate>}>
           <Route index element={<AdminDashboard />} />
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="products" element={<AdminProducts />} />
@@ -58,6 +73,7 @@ const AppRoutes = () => {
           <Route path="orders" element={<AdminOrders />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="messages" element={<AdminMessages />} />
+          <Route path="settings" element={<AdminSettings />} />
         </Route>
       </Routes>
     );
@@ -72,6 +88,7 @@ const AppRoutes = () => {
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout" element={<Protected><Checkout /></Protected>} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/order/:id" element={<Protected><OrderDetail /></Protected>} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/edit" element={<Protected><EditProfile /></Protected>} />
         <Route path="/notifications" element={<Notifications />} />
@@ -79,6 +96,7 @@ const AppRoutes = () => {
         <Route path="/search" element={<Search />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Shell>
   );

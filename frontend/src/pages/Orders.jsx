@@ -54,7 +54,7 @@ const Orders = () => {
             <Link to="/" className="inline-flex mt-5 items-center gap-2 bg-emerald-600 text-white px-5 h-11 rounded-full text-sm font-semibold">Browse products</Link>
           </div>
         ) : orders.map((o) => (
-          <div key={o.id} className="rounded-2xl border border-neutral-100 p-3.5">
+          <Link key={o.id} to={`/order/${o.id}`} className="block rounded-2xl border border-neutral-100 p-3.5 hover:border-emerald-200 hover:bg-emerald-50/30 transition-colors">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-[11.5px] text-neutral-500">{new Date(o.createdAt).toLocaleString()}</div>
@@ -75,7 +75,7 @@ const Orders = () => {
               </div>
               <ChevronRight className="w-4 h-4 text-neutral-400" />
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

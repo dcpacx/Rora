@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { api, formatBDT } from '../../lib/api';
-import { LayoutDashboard, Package, ClipboardList, LogOut, ArrowUpRight, Users, TrendingUp, Clock, BarChart3, FolderTree, Menu, X, Leaf, ChevronRight, MessageCircle, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Package, ClipboardList, LogOut, ArrowUpRight, Users, TrendingUp, Clock, BarChart3, FolderTree, Menu, X, Leaf, ChevronRight, MessageCircle, Sparkles, Settings as SettingsIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ADMIN_PATH } from '../../lib/admin-path';
 
@@ -13,6 +13,7 @@ const navItems = [
   { to: `${ADMIN_PATH}/orders`, label: 'Orders', icon: ClipboardList },
   { to: `${ADMIN_PATH}/users`, label: 'Customers', icon: Users },
   { to: `${ADMIN_PATH}/messages`, label: 'Messages', icon: MessageCircle },
+  { to: `${ADMIN_PATH}/settings`, label: 'Settings', icon: SettingsIcon },
 ];
 
 export const AdminLayout = () => {
