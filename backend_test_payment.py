@@ -7,7 +7,7 @@ import requests
 import json
 import sys
 
-BASE_URL = "https://retail-portal-160.preview.emergentagent.com/api"
+BASE_URL = "https://admin-dashboard-v2-58.preview.emergentagent.com/api"
 
 # Test credentials
 ADMIN_EMAIL = "admin@organicshop.com"
