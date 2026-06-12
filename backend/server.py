@@ -117,6 +117,19 @@ class OrderCreate(BaseModel):
 class OrderStatusUpdate(BaseModel):
     status: Literal['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
 
+class NotificationCreate(BaseModel):
+    title: str
+    body: str
+    type: str = 'system'
+    orderId: Optional[str] = None
+    userId: Optional[str] = None  # if None, broadcast to all customers
+
+class CategoryUpsert(BaseModel):
+    slug: str
+    name: str
+    icon: str = 'Leaf'
+    image: Optional[str] = None
+
 class PaymentInitiate(BaseModel):
     method: Literal['bkash', 'nagad']
     phone: str
@@ -164,6 +177,27 @@ def slugify(s: str) -> str:
     return s
 
 
+async def push_notification(user_id: Optional[str], title: str, body: str, n_type: str = 'system', order_id: Optional[str] = None):
+    """Create a notification. If user_id is None, broadcast to all customers."""
+    if user_id is None:
+        users = await db.users.find({'role': 'customer'}, {'id': 1}).to_list(2000)
+        ids = [u['id'] for u in users]
+    else:
+        ids = [user_id]
+    docs = [{
+        'id': str(uuid.uuid4()),
+        'userId': uid,
+        'title': title,
+        'body': body,
+        'type': n_type,
+        'orderId': order_id,
+        'read': False,
+        'createdAt': datetime.utcnow().isoformat(),
+    } for uid in ids]
+    if docs:
+        await db.notifications.insert_many(docs)
+
+
 # ------------ Routes ------------
 @api.get('/')
 async def root(): return {'message': 'Organic Shop API'}
@@ -183,6 +217,7 @@ async def signup(body: UserSignup):
         'createdAt': datetime.utcnow().isoformat(),
     }
     await db.users.insert_one(user)
+    await push_notification(user['id'], 'Welcome to Sobuj! 🌱', 'Thanks for joining. Get ৳100 off your first order with code SOBUJ100.', 'system')
     token = create_token(user['id'], 'customer')
     return {'token': token, 'user': {'id': user['id'], 'name': user['name'], 'email': user['email'], 'phone': user['phone'], 'role': user['role']}}
 
@@ -340,6 +375,7 @@ async def create_order(body: OrderCreate, user = Depends(get_current_user)):
         'createdAt': datetime.utcnow().isoformat(),
     }
     await db.orders.insert_one(order)
+    await push_notification(user['id'], f"Order placed · {order['orderNo']}", f"Your order of ৳{order['total']:.0f} has been received. We'll update you as it progresses.", 'order', order['id'])
     order.pop('_id', None)
     return order
 
@@ -366,8 +402,17 @@ async def admin_orders(admin = Depends(get_admin)):
 
 @api.patch('/admin/orders/{order_id}')
 async def admin_update_order(order_id: str, body: OrderStatusUpdate, admin = Depends(get_admin)):
-    res = await db.orders.update_one({'id': order_id}, {'$set': {'status': body.status}})
-    if res.matched_count == 0: raise HTTPException(404, 'Order not found')
+    o = await db.orders.find_one({'id': order_id})
+    if not o: raise HTTPException(404, 'Order not found')
+    await db.orders.update_one({'id': order_id}, {'$set': {'status': body.status}})
+    status_msgs = {
+        'confirmed': 'has been confirmed. Preparing for dispatch.',
+        'shipped': 'is on the way! Track from your orders.',
+        'delivered': 'has been delivered. Enjoy your organic goodies!',
+        'cancelled': 'has been cancelled. Please contact support if this was a mistake.',
+        'pending': 'is pending review.',
+    }
+    await push_notification(o['userId'], f"Order {body.status} · {o['orderNo']}", f"Your order {status_msgs.get(body.status, '')}", 'order', order_id)
     o = await db.orders.find_one({'id': order_id}); o.pop('_id', None)
     return o
 
@@ -408,6 +453,92 @@ async def admin_user_detail(user_id: str, admin = Depends(get_admin)):
     orders = await db.orders.find({'userId': user_id}).sort('createdAt', -1).to_list(200)
     for o in orders: o.pop('_id', None)
     return {'user': u, 'orders': orders}
+
+
+# Notifications
+@api.get('/notifications')
+async def list_notifications(user = Depends(get_current_user)):
+    items = await db.notifications.find({'userId': user['id']}).sort('createdAt', -1).to_list(200)
+    for n in items: n.pop('_id', None)
+    return items
+
+@api.get('/notifications/unread-count')
+async def unread_count(user = Depends(get_current_user)):
+    c = await db.notifications.count_documents({'userId': user['id'], 'read': False})
+    return {'count': c}
+
+@api.post('/notifications/{nid}/read')
+async def mark_read(nid: str, user = Depends(get_current_user)):
+    await db.notifications.update_one({'id': nid, 'userId': user['id']}, {'$set': {'read': True}})
+    return {'ok': True}
+
+@api.post('/notifications/read-all')
+async def mark_all_read(user = Depends(get_current_user)):
+    await db.notifications.update_many({'userId': user['id'], 'read': False}, {'$set': {'read': True}})
+    return {'ok': True}
+
+
+# Admin: broadcast notification + categories CRUD + analytics
+@api.post('/admin/notifications/broadcast')
+async def broadcast(body: NotificationCreate, admin = Depends(get_admin)):
+    await push_notification(body.userId, body.title, body.body, body.type, body.orderId)
+    return {'ok': True}
+
+@api.post('/admin/categories')
+async def admin_create_category(body: CategoryUpsert, admin = Depends(get_admin)):
+    if await db.categories.find_one({'slug': body.slug}):
+        raise HTTPException(400, 'Category slug exists')
+    cat = {'id': str(uuid.uuid4()), 'slug': body.slug, 'name': body.name, 'icon': body.icon, 'image': body.image}
+    await db.categories.insert_one(cat); cat.pop('_id', None)
+    return cat
+
+@api.put('/admin/categories/{cat_id}')
+async def admin_update_category(cat_id: str, body: CategoryUpsert, admin = Depends(get_admin)):
+    res = await db.categories.update_one({'id': cat_id}, {'$set': body.model_dump()})
+    if res.matched_count == 0: raise HTTPException(404, 'Category not found')
+    cat = await db.categories.find_one({'id': cat_id}); cat.pop('_id', None)
+    return cat
+
+@api.delete('/admin/categories/{cat_id}')
+async def admin_delete_category(cat_id: str, admin = Depends(get_admin)):
+    res = await db.categories.delete_one({'id': cat_id})
+    if res.deleted_count == 0: raise HTTPException(404, 'Category not found')
+    return {'ok': True}
+
+@api.get('/admin/analytics')
+async def admin_analytics(admin = Depends(get_admin)):
+    """Revenue + order counts grouped by day for the last 14 days, plus top products & status breakdown."""
+    from collections import defaultdict
+    today = datetime.utcnow()
+    start = today - timedelta(days=13)
+    orders = await db.orders.find({}).to_list(2000)
+    daily_rev = defaultdict(float); daily_cnt = defaultdict(int)
+    status_counts = defaultdict(int); method_counts = defaultdict(int)
+    product_sales = defaultdict(lambda: {'name': '', 'qty': 0, 'revenue': 0.0, 'image': ''})
+    for o in orders:
+        d = o.get('createdAt', '')[:10]
+        daily_rev[d] += o.get('total', 0)
+        daily_cnt[d] += 1
+        status_counts[o.get('status', 'pending')] += 1
+        method_counts[o.get('paymentMethod', 'cod')] += 1
+        for it in o.get('items', []):
+            ps = product_sales[it.get('productId', it.get('name'))]
+            ps['name'] = it.get('name'); ps['image'] = it.get('image')
+            ps['qty'] += it.get('qty', 0); ps['revenue'] += it.get('price', 0) * it.get('qty', 0)
+    # Build 14-day series
+    series = []
+    for i in range(14):
+        d = (start + timedelta(days=i)).strftime('%Y-%m-%d')
+        series.append({'date': d, 'revenue': round(daily_rev.get(d, 0), 2), 'orders': daily_cnt.get(d, 0)})
+    top = sorted(product_sales.values(), key=lambda x: x['revenue'], reverse=True)[:5]
+    return {
+        'series': series,
+        'statusCounts': dict(status_counts),
+        'methodCounts': dict(method_counts),
+        'topProducts': top,
+        'totalRevenue': round(sum(daily_rev.values()), 2),
+        'totalOrders': sum(daily_cnt.values()),
+    }
 
 
 # ------------ Seed ------------

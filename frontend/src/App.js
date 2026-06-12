@@ -3,6 +3,7 @@ import './App.css';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
+import { NotifProvider } from './contexts/NotifContext';
 import { Protected } from './components/Protected';
 import BottomNav from './components/BottomNav';
 import DesktopNav from './components/DesktopNav';
@@ -15,12 +16,16 @@ import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import Profile from './pages/Profile';
 import Search from './pages/Search';
+import Notifications from './pages/Notifications';
 import { Login, Signup } from './pages/Auth';
 import { AdminLayout, AdminDashboard } from './pages/admin/Dashboard';
 import AdminProducts from './pages/admin/Products';
 import AdminOrders from './pages/admin/Orders';
 import AdminUsers from './pages/admin/Users';
+import AdminCategoriesPage from './pages/admin/Categories';
+import AdminAnalytics from './pages/admin/Analytics';
 import { Toaster } from './components/ui/toaster';
+import { ADMIN_PATH } from './lib/admin-path';
 
 const Shell = ({ children }) => {
   const { pathname } = useLocation();
@@ -37,12 +42,14 @@ const Shell = ({ children }) => {
 
 const AppRoutes = () => {
   const { pathname } = useLocation();
-  if (pathname.startsWith('/admin')) {
+  if (pathname.startsWith(ADMIN_PATH)) {
     return (
       <Routes>
-        <Route path="/admin" element={<Protected adminOnly><AdminLayout /></Protected>}>
+        <Route path={ADMIN_PATH} element={<Protected adminOnly><AdminLayout /></Protected>}>
           <Route index element={<AdminDashboard />} />
+          <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="products" element={<AdminProducts />} />
+          <Route path="categories" element={<AdminCategoriesPage />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="users" element={<AdminUsers />} />
         </Route>
@@ -60,6 +67,7 @@ const AppRoutes = () => {
         <Route path="/checkout" element={<Protected><Checkout /></Protected>} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/notifications" element={<Notifications />} />
         <Route path="/search" element={<Search />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
@@ -72,10 +80,12 @@ function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <BrowserRouter>
-          <AppRoutes />
-          <Toaster />
-        </BrowserRouter>
+        <NotifProvider>
+          <BrowserRouter>
+            <AppRoutes />
+            <Toaster />
+          </BrowserRouter>
+        </NotifProvider>
       </CartProvider>
     </AuthProvider>
   );

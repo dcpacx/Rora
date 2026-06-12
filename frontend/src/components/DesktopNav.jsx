@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Leaf, ShoppingBag, User, ClipboardList, LayoutGrid, Home, LogOut, Menu, X } from 'lucide-react';
+import { Search, Leaf, ShoppingBag, User, LayoutGrid, Home, LogOut, Bell } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotifContext';
+import { ADMIN_PATH } from '../lib/admin-path';
 
 const navItems = [
   { to: '/', label: 'Home', icon: Home, exact: true },
   { to: '/categories', label: 'Categories', icon: LayoutGrid },
-  { to: '/orders', label: 'Orders', icon: ClipboardList },
 ];
 
 const DesktopNav = () => {
   const { pathname } = useLocation();
   const { cartCount } = useCart();
   const { user, logout, isAdmin } = useAuth();
+  const { unread } = useNotifications();
   const nav = useNavigate();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -53,7 +55,15 @@ const DesktopNav = () => {
           </div>
         </form>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          {user && (
+            <Link to="/notifications" className="relative w-10 h-10 grid place-items-center rounded-full hover:bg-neutral-100">
+              <Bell className="w-5 h-5 text-neutral-700" />
+              {unread > 0 && (
+                <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">{unread > 99 ? '99+' : unread}</span>
+              )}
+            </Link>
+          )}
           <Link to="/cart" className="relative px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors flex items-center gap-1.5">
             <ShoppingBag className="w-5 h-5 text-neutral-700" />
             <span className="text-sm font-medium">Cart</span>
@@ -73,9 +83,8 @@ const DesktopNav = () => {
                       <div className="text-sm font-semibold truncate">{user.name}</div>
                       <div className="text-[11px] text-neutral-500 truncate">{user.email}</div>
                     </div>
-                    <Link to="/profile" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-neutral-50"><User className="w-4 h-4" /> Profile</Link>
-                    <Link to="/orders" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-neutral-50"><ClipboardList className="w-4 h-4" /> My orders</Link>
-                    {isAdmin && (<Link to="/admin" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-neutral-50 text-emerald-700 font-semibold">Admin dashboard</Link>)}
+                    <Link to="/profile" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-neutral-50"><User className="w-4 h-4" /> Profile & orders</Link>
+                    {isAdmin && (<Link to={ADMIN_PATH} onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-neutral-50 text-emerald-700 font-semibold">Admin dashboard</Link>)}
                     <button onClick={() => { logout(); setOpen(false); nav('/'); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-red-50 text-red-600"><LogOut className="w-4 h-4" /> Logout</button>
                   </div>
                 </>

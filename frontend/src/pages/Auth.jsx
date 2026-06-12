@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/use-toast';
 import { Leaf, Eye, EyeOff } from 'lucide-react';
+import { ADMIN_PATH } from '../lib/admin-path';
 
 export const Login = () => {
   const { login } = useAuth();
@@ -21,7 +22,7 @@ export const Login = () => {
     try {
       const u = await login(email, password);
       toast({ title: `Welcome back, ${u.name.split(' ')[0]}!` });
-      nav(u.role === 'admin' ? '/admin' : next);
+      nav(u.role === 'admin' ? ADMIN_PATH : next);
     } catch (e) {
       toast({ title: 'Login failed', description: e.response?.data?.detail || 'Check your credentials', variant: 'destructive' });
     } finally { setLoading(false); }

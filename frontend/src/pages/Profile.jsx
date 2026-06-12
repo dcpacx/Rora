@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { User, LogOut, ChevronRight, ShieldCheck, Phone, Mail, ClipboardList, HelpCircle, Leaf } from 'lucide-react';
+import { User, LogOut, ChevronRight, ShieldCheck, Phone, Mail, ClipboardList, HelpCircle, Leaf, Bell } from 'lucide-react';
 import MobileHeader from '../components/MobileHeader';
+import { ADMIN_PATH } from '../lib/admin-path';
 
 const Row = ({ icon: Icon, label, to, onClick, danger = false }) => {
   const cls = `w-full flex items-center justify-between p-3.5 rounded-2xl bg-white border border-neutral-100 ${danger ? 'text-red-600' : 'text-neutral-800'} hover:bg-neutral-50 transition-colors`;
@@ -57,7 +58,8 @@ const Profile = () => {
 
         <div className="mt-4 space-y-2">
           <Row icon={ClipboardList} label="My orders" to="/orders" />
-          {isAdmin && <Row icon={ShieldCheck} label="Admin dashboard" to="/admin" />}
+          <Row icon={Bell} label="Notifications" to="/notifications" />
+          {isAdmin && <Row icon={ShieldCheck} label="Admin dashboard" to={ADMIN_PATH} />}
           <Row icon={Leaf} label="About organic certification" onClick={() => {}} />
           <Row icon={HelpCircle} label="Help & support" onClick={() => {}} />
           <Row icon={LogOut} label="Logout" danger onClick={() => { logout(); nav('/'); }} />

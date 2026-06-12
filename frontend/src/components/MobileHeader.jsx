@@ -1,14 +1,13 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, ChevronLeft, Bell, MapPin } from 'lucide-react';
+import { Search, ChevronLeft, Bell, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-
-const hideOnRoutes = ['/cart', '/profile', '/orders', '/categories'];
+import { useNotifications } from '../contexts/NotifContext';
 
 const MobileHeader = ({ title, back = false, hideSearch = false }) => {
-  const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { unread } = useNotifications();
 
   if (title || back) {
     return (
@@ -30,22 +29,26 @@ const MobileHeader = ({ title, back = false, hideSearch = false }) => {
     );
   }
 
+  // Home header — user profile left, notification bell right (no title)
   return (
     <div className="lg:hidden bg-emerald-600 text-white px-4 pt-3 pb-3 sticky top-0 z-30">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <MapPin className="w-3.5 h-3.5" />
-          <div className="text-[11px] leading-tight">
-            <div className="opacity-80">Deliver to</div>
-            <div className="font-semibold">Dhaka 1209</div>
+        <Link to={user ? '/profile' : '/login'} className="flex items-center gap-2 -ml-1 pr-2 py-0.5 rounded-full hover:bg-white/10 transition-colors">
+          <div className="w-9 h-9 rounded-full bg-white/20 grid place-items-center text-sm font-extrabold">
+            {user ? user.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
           </div>
-        </div>
-        <div className="text-center">
-          <div className="text-base font-extrabold tracking-tight">Sobuj <span className="font-light">•</span> সবুজ</div>
-          <div className="text-[10px] opacity-80 -mt-0.5">Pure. Organic. Local.</div>
-        </div>
-        <button onClick={() => navigate(user ? '/profile' : '/login')} className="w-9 h-9 grid place-items-center rounded-full bg-white/15 hover:bg-white/25 transition-colors">
+          <div className="leading-tight text-left">
+            <div className="text-[10.5px] opacity-80">{user ? 'Welcome back' : 'Tap to'}</div>
+            <div className="text-[13px] font-semibold truncate max-w-[160px]">{user ? user.name : 'Sign in'}</div>
+          </div>
+        </Link>
+        <button onClick={() => navigate('/notifications')} className="relative w-10 h-10 grid place-items-center rounded-full bg-white/15 hover:bg-white/25 transition-colors">
           <Bell className="w-4.5 h-4.5" />
+          {unread > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center border-2 border-emerald-600">
+              {unread > 99 ? '99+' : unread}
+            </span>
+          )}
         </button>
       </div>
       <button onClick={() => navigate('/search')} className="mt-3 w-full h-11 rounded-full bg-white text-neutral-500 px-4 flex items-center gap-2 text-sm">

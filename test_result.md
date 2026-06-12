@@ -195,6 +195,51 @@ backend:
         agent: "testing"
         comment: "✓ PASS - Product tags functionality working correctly. Tested: (6) POST /products with tags=['best-seller', 'raw'] returns product with tags array, (7) PUT /products/{id} with tags=['premium'] correctly replaces tags, (8) GET /products/{slug} returns tags field in response, (9) DELETE /products/{id} cleanup successful."
 
+  - task: "Notification system (list, unread-count, mark read, read-all)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Notification endpoints: GET /api/notifications (list all for user), GET /api/notifications/unread-count (count unread), POST /api/notifications/{id}/read (mark one read), POST /api/notifications/read-all (mark all read). Welcome notification created on signup, order notifications on order creation and status updates."
+      - working: true
+        agent: "testing"
+        comment: "✓ PASS - All notification endpoints working correctly. Tested: (1) Signup creates welcome notification with title 'Welcome to Sobuj! 🌱', (2) GET /notifications returns notification list, (3) GET /notifications/unread-count returns {count: 1} correctly, (4) POST /notifications/{id}/read marks notification read and unread-count becomes 0, (5) POST /notifications/read-all is idempotent (called twice, unread count remains 0), (6) Order creation triggers 'Order placed' notification, (7) Admin PATCH order status to 'shipped' triggers 'Order shipped' notification to customer. All notification flows working as expected."
+
+  - task: "Admin category CRUD endpoints"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Admin category management: POST /api/admin/categories (create with slug, name, icon), PUT /api/admin/categories/{id} (update), DELETE /api/admin/categories/{id} (delete). All endpoints require admin authentication."
+      - working: true
+        agent: "testing"
+        comment: "✓ PASS - Admin category CRUD working correctly. Tested: (8) POST /admin/categories with {slug:'test-cat', name:'Test Cat', icon:'Leaf'} returns 200 with category id, (9) PUT /admin/categories/{id} updates name to 'Updated Test Category' successfully, (10) DELETE /admin/categories/{id} returns 200 and deletes category. All CRUD operations working with proper admin authentication."
+
+  - task: "Admin analytics endpoint"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/admin/analytics returns comprehensive analytics: series (14-day revenue and order counts), statusCounts (order status breakdown), methodCounts (payment method breakdown), topProducts (top 5 by revenue), totalRevenue, totalOrders."
+      - working: true
+        agent: "testing"
+        comment: "✓ PASS - Admin analytics endpoint working correctly. Tested: (11) GET /admin/analytics returns all required fields: series (14 items with date, revenue, orders), statusCounts, methodCounts, topProducts, totalRevenue (৳3600.0), totalOrders (4). All data structures correct and complete."
+
 frontend:
   - task: "Mobile-first storefront with bottom nav"
     implemented: true
@@ -211,7 +256,7 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 2
+  test_sequence: 3
   run_ui: false
 
 test_plan:
@@ -229,3 +274,5 @@ agent_communication:
     message: "Added new admin user management endpoints (GET /api/admin/users, GET /api/admin/users/{user_id}) and product tags functionality. Please run regression tests to verify these new features work correctly with existing functionality."
   - agent: "testing"
     message: "✅ REGRESSION TESTING COMPLETE - All 9 regression tests passed successfully for newly added features. Tested: (1) Admin login with credentials admin@organicshop.com/admin123, (2) GET /admin/users returns customers with orderCount and totalSpent numeric fields (found 3 customers), (3) GET /admin/users without auth correctly returns 401, (4) GET /admin/users with customer token correctly returns 403, (5) GET /admin/users/{user_id} returns {user, orders} structure, (6) POST /products with tags=['best-seller', 'raw'] creates product with tags array, (7) PUT /products/{id} with tags=['premium'] correctly replaces tags, (8) GET /products/{slug} returns tags field, (9) DELETE /products/{id} cleanup successful. All new endpoints working correctly with proper authentication and authorization."
+  - agent: "testing"
+    message: "✅ NOTIFICATION & ADMIN ENDPOINTS TESTING COMPLETE - All 11 test steps passed successfully. Comprehensive testing of new features: (1) Signup creates welcome notification 'Welcome to Sobuj! 🌱', (2) GET /notifications returns notification list, (3) GET /notifications/unread-count returns correct count, (4) POST /notifications/{id}/read marks notification read and updates unread count, (5) POST /notifications/read-all is idempotent, (6) Order creation triggers 'Order placed' notification, (7) Admin order status update to 'shipped' triggers customer notification, (8) POST /admin/categories creates category successfully, (9) PUT /admin/categories/{id} updates category, (10) DELETE /admin/categories/{id} deletes category, (11) GET /admin/analytics returns all required fields (series with 14 items, statusCounts, methodCounts, topProducts, totalRevenue, totalOrders). All notification flows and admin endpoints working correctly with proper authentication."
