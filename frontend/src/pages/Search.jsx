@@ -1,39 +1,31 @@
-import React, { useMemo } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import React, { useEffect, useState, useMemo } from 'react';
+import { api, formatBDT } from '../lib/api';
 import ProductCard from '../components/ProductCard';
-import { products } from '../mock';
-import { Search } from 'lucide-react';
+import MobileHeader from '../components/MobileHeader';
+import { Search as SearchIcon } from 'lucide-react';
 
 const SearchPage = () => {
-  const [sp] = useSearchParams();
-  const q = sp.get('q') || '';
-  const items = useMemo(() => {
-    const needle = q.toLowerCase().trim();
-    if (!needle) return products;
-    return products.filter((p) =>
-      p.name.toLowerCase().includes(needle) ||
-      p.store.toLowerCase().includes(needle) ||
-      p.category.toLowerCase().includes(needle)
-    );
-  }, [q]);
-
+  const [q, setQ] = useState('');
+  const [all, setAll] = useState([]);
+  useEffect(() => { (async () => { const { data } = await api.get('/products'); setAll(data); })(); }, []);
+  const results = useMemo(() => {
+    const n = q.toLowerCase().trim();
+    if (!n) return all;
+    return all.filter((p) => p.name.toLowerCase().includes(n) || p.description?.toLowerCase().includes(n));
+  }, [q, all]);
   return (
-    <div className="max-w-[1280px] mx-auto px-4 mt-6 mb-16">
-      <div className="flex items-center gap-2 text-sm text-neutral-500">
-        <Search className="w-4 h-4" />
-        Showing {items.length} results for <span className="text-neutral-900 font-semibold">“{q || 'all products'}”</span>
+    <div className="pb-4">
+      <MobileHeader title="Search" back hideSearch />
+      <div className="px-4 mt-3">
+        <div className="flex items-center bg-neutral-100 rounded-full h-11 px-4 gap-2">
+          <SearchIcon className="w-4 h-4 text-neutral-500" />
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search for honey, oil, spices…" className="flex-1 bg-transparent outline-none text-sm" />
+        </div>
+        <div className="text-[11px] text-neutral-500 mt-3">{results.length} products</div>
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          {results.map((p) => (<ProductCard key={p.id} product={p} />))}
+        </div>
       </div>
-      {items.length === 0 ? (
-        <div className="text-center py-24">
-          <h1 className="text-xl font-extrabold">No products match “{q}”</h1>
-          <p className="text-sm text-neutral-500 mt-1">Try a different keyword or browse categories.</p>
-          <Link to="/" className="inline-block mt-5 bg-neutral-900 text-white px-5 h-11 leading-[44px] rounded-full text-sm font-semibold hover:bg-neutral-800">Go home</Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-5">
-          {items.map((p) => (<ProductCard key={p.id} product={p} />))}
-        </div>
-      )}
     </div>
   );
 };

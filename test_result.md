@@ -101,3 +101,97 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Mobile-first organic-products e-commerce app (Sobuj) with bottom nav (Home/Categories/Cart/Orders/Profile), JWT auth (customer + admin), product catalogue, simulated bKash/Nagad/COD checkout with OTP, order management, and admin dashboard for product/order CRUD."
+
+backend:
+  - task: "Auth: signup, login, /me with JWT"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "JWT bearer tokens; password hashed via passlib bcrypt. Endpoints: POST /api/auth/signup, /api/auth/login, GET /api/auth/me. Seeded admin admin@organicshop.com / admin123."
+      - working: true
+        agent: "testing"
+        comment: "✓ PASS - All auth endpoints working correctly. Tested: (1) Signup creates user with token that works for /me, (2) Login returns valid token, (3) /me returns correct profile, (4) Admin login returns role=admin in response. JWT tokens validated successfully."
+
+  - task: "Categories and Products CRUD (admin-protected for write)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/categories, GET /api/products (filters: category, featured, q), GET /api/products/{slug}, POST/PUT/DELETE /api/products/* (admin)."
+      - working: true
+        agent: "testing"
+        comment: "✓ PASS - All category and product endpoints working. Tested: (5) GET /categories returns 8 categories, (6) GET /products returns 16 products with filters (category=spices: 3, featured=true: 6, q=honey: 1), (7) GET /products/{slug} returns product details, (8) POST /products without admin token correctly returns 403, (9) Admin can create product with id+slug, update price, and delete successfully."
+
+  - task: "Simulated payments (bKash/Nagad) initiate + verify with OTP"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/payments/initiate returns sessionId + demo OTP 1234. POST /api/payments/verify returns a txnId when OTP correct."
+      - working: true
+        agent: "testing"
+        comment: "✓ PASS - Payment simulation working correctly. Tested: (10) POST /payments/initiate returns sessionId and demoOtp '1234', (11) POST /payments/verify with wrong OTP correctly returns 400, (12) POST /payments/verify with correct OTP '1234' returns verified=true and txnId."
+
+  - task: "Orders: create, list mine, get one, admin list/update"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/orders (auth), GET /api/orders/my, GET /api/orders/{id}, GET /api/admin/orders, PATCH /api/admin/orders/{id}, GET /api/admin/stats."
+      - working: true
+        agent: "testing"
+        comment: "✓ PASS - All order endpoints working correctly. Tested: (13) POST /orders with bkash returns status=confirmed, paymentStatus=paid, orderNo present, (14) POST /orders with COD returns status=pending, paymentStatus=unpaid, (15) GET /orders/my returns customer's orders, (16) GET /orders/{id} returns order for owner, different customer gets 403, (17) GET /admin/orders lists all orders for admin, (18) PATCH /admin/orders/{id} updates status to 'shipped' for admin, non-admin gets 403, (19) GET /admin/stats returns products/orders/customers/revenue counts."
+
+frontend:
+  - task: "Mobile-first storefront with bottom nav"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phone-frame layout on desktop. Pages: Home, Categories, Category, Product, Search, Cart, Checkout (multi-step COD/bKash/Nagad OTP), Orders, Profile, Login, Signup. Admin: Dashboard, Products, Orders."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus: []
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Backend rebuilt for organic shop. Auth uses JWT (admin seeded: admin@organicshop.com / admin123). Payments are simulated — initiate returns demo OTP 1234, verify returns a txnId. Please test full happy-path: signup -> login -> list products -> simulate payment initiate+verify -> create order -> list my orders -> admin list/update order status -> admin product create/update/delete."
+  - agent: "testing"
+    message: "✅ BACKEND TESTING COMPLETE - All 19 test steps passed successfully. Comprehensive testing completed covering: (1) Auth signup/login/me with JWT validation, (2) Admin login with role verification, (3) Categories listing (8 categories), (4) Products listing with filters (category, featured, search), (5) Product CRUD with admin protection, (6) Payment initiation and OTP verification (correct/incorrect), (7) Order creation with bkash (confirmed/paid) and COD (pending/unpaid), (8) Order listing and access control, (9) Admin order management and stats. No critical issues found. All endpoints returning correct status codes and data. Backend is production-ready."

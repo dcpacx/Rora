@@ -1,0 +1,193 @@
+import React, { useEffect, useState } from 'react';
+import { api, formatBDT } from '../../lib/api';
+import { Plus, Pencil, Trash2, X, Upload, Image as ImageIcon } from 'lucide-react';
+import { useToast } from '../../hooks/use-toast';
+
+const empty = { name: '', description: '', price: '', oldPrice: '', image: '', category: '', unit: '1 kg', stock: 100, organic: true, featured: false };
+
+const ProductForm = ({ initial, categories, onClose, onSaved }) => {
+  const { toast } = useToast();
+  const [f, setF] = useState({ ...empty, ...(initial || {}), price: initial?.price?.toString() || '', oldPrice: initial?.oldPrice?.toString() || '' });
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const onFile = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { toast({ title: 'Image too large (max 2 MB)', variant: 'destructive' }); return; }
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = () => { setF((s) => ({ ...s, image: reader.result })); setUploading(false); };
+    reader.readAsDataURL(file);
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!f.name || !f.price || !f.image || !f.category) { toast({ title: 'Fill all required fields', variant: 'destructive' }); return; }
+    setSaving(true);
+    try {
+      const payload = { name: f.name, description: f.description, price: parseFloat(f.price), oldPrice: f.oldPrice ? parseFloat(f.oldPrice) : null, image: f.image, category: f.category, unit: f.unit, stock: parseInt(f.stock) || 0, organic: f.organic, featured: f.featured };
+      if (initial?.id) { await api.put(`/products/${initial.id}`, payload); toast({ title: 'Product updated' }); }
+      else { await api.post('/products', payload); toast({ title: 'Product created' }); }
+      onSaved();
+    } catch (e) {
+      toast({ title: 'Save failed', description: e.response?.data?.detail || 'Try again', variant: 'destructive' });
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end md:items-center justify-center p-0 md:p-4">
+      <div className="bg-white w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-neutral-100 px-5 py-3.5 flex items-center justify-between">
+          <h2 className="font-extrabold text-lg">{initial ? 'Edit product' : 'Add product'}</h2>
+          <button onClick={onClose} className="w-9 h-9 grid place-items-center rounded-full hover:bg-neutral-100"><X className="w-5 h-5" /></button>
+        </div>
+        <form onSubmit={submit} className="p-5 space-y-4">
+          <div>
+            <label className="text-[11px] font-semibold text-neutral-700 uppercase">Product image *</label>
+            <div className="mt-1.5 flex items-center gap-3">
+              <div className="w-24 h-24 rounded-xl bg-neutral-50 border border-neutral-200 grid place-items-center overflow-hidden">
+                {f.image ? <img src={f.image} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="w-6 h-6 text-neutral-400" />}
+              </div>
+              <div className="flex-1 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-medium hover:bg-emerald-100 w-fit">
+                  <Upload className="w-4 h-4" /> {uploading ? 'Uploading…' : 'Upload image'}
+                  <input type="file" accept="image/*" onChange={onFile} className="hidden" />
+                </label>
+                <input value={f.image?.startsWith('data:') ? '' : f.image} onChange={(e) => setF({ ...f, image: e.target.value })} placeholder="or paste image URL" className="w-full h-9 px-3 rounded-lg bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-xs" />
+                <div className="text-[10.5px] text-neutral-500">PNG/JPG, up to 2 MB.</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold text-neutral-700 uppercase">Name *</label>
+            <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold text-neutral-700 uppercase">Description</label>
+            <textarea value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} rows={3} className="mt-1 w-full p-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm resize-none" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-semibold text-neutral-700 uppercase">Category *</label>
+              <select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm">
+                <option value="">Select category</option>
+                {categories.map((c) => (<option key={c.slug} value={c.slug}>{c.name}</option>))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-neutral-700 uppercase">Unit</label>
+              <input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} placeholder="e.g. 500 g, 1 L" className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="text-[11px] font-semibold text-neutral-700 uppercase">Price (৳) *</label>
+              <input type="number" step="0.01" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-neutral-700 uppercase">Old price</label>
+              <input type="number" step="0.01" value={f.oldPrice} onChange={(e) => setF({ ...f, oldPrice: e.target.value })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-neutral-700 uppercase">Stock</label>
+              <input type="number" value={f.stock} onChange={(e) => setF({ ...f, stock: e.target.value })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+            </div>
+          </div>
+          <div className="flex items-center gap-5">
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.organic} onChange={(e) => setF({ ...f, organic: e.target.checked })} className="w-4 h-4 accent-emerald-600" /> Certified organic</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.featured} onChange={(e) => setF({ ...f, featured: e.target.checked })} className="w-4 h-4 accent-emerald-600" /> Featured on home</label>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 h-11 rounded-full bg-neutral-100 text-neutral-700 font-semibold">Cancel</button>
+            <button disabled={saving} type="submit" className="flex-1 h-11 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-60">{saving ? 'Saving…' : (initial ? 'Save changes' : 'Create product')}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const AdminProducts = () => {
+  const [products, setProducts] = useState([]);
+  const [cats, setCats] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [confirmDel, setConfirmDel] = useState(null);
+  const { toast } = useToast();
+
+  const load = async () => {
+    setLoading(true);
+    const [p, c] = await Promise.all([api.get('/products'), api.get('/categories')]);
+    setProducts(p.data); setCats(c.data);
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  const del = async (id) => {
+    try { await api.delete(`/products/${id}`); toast({ title: 'Product deleted' }); setConfirmDel(null); load(); }
+    catch (e) { toast({ title: 'Delete failed', variant: 'destructive' }); }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-2xl font-extrabold">Products</h1>
+          <p className="text-sm text-neutral-500">Manage your organic catalogue.</p>
+        </div>
+        <button onClick={() => { setEditing(null); setOpen(true); }} className="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 h-10 rounded-full text-sm font-semibold hover:bg-emerald-700"><Plus className="w-4 h-4" /> Add product</button>
+      </div>
+      <div className="rounded-2xl bg-white border border-neutral-100 overflow-hidden">
+        {loading ? <div className="p-8 text-center text-sm text-neutral-500">Loading…</div> : products.length === 0 ? (
+          <div className="p-12 text-center"><div className="text-sm font-semibold">No products yet</div><div className="text-xs text-neutral-500 mt-1">Add your first organic product to get started.</div></div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50 text-[11px] uppercase text-neutral-500">
+              <tr><th className="text-left px-4 py-2">Product</th><th className="text-left px-4 py-2">Category</th><th className="text-right px-4 py-2">Price</th><th className="text-right px-4 py-2">Stock</th><th className="px-4 py-2"></th></tr>
+            </thead>
+            <tbody>
+              {products.map((p) => (
+                <tr key={p.id} className="border-t border-neutral-100">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <img src={p.image} alt={p.name} onError={(e) => { e.currentTarget.src = 'https://placehold.co/60/f5f5f5/525252?text=img'; }} className="w-10 h-10 rounded-lg object-cover bg-neutral-50" />
+                      <div>
+                        <div className="font-semibold text-[13px] line-clamp-1 max-w-[260px]">{p.name}</div>
+                        <div className="text-[10.5px] text-neutral-500">{p.unit} {p.featured && <span className="ml-1 text-emerald-700">• Featured</span>}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-xs capitalize">{(cats.find((c) => c.slug === p.category)?.name) || p.category}</td>
+                  <td className="px-4 py-3 text-right font-bold">৳{formatBDT(p.price)}{p.oldPrice && (<span className="ml-1 text-[10px] text-neutral-400 line-through font-normal">৳{formatBDT(p.oldPrice)}</span>)}</td>
+                  <td className="px-4 py-3 text-right text-sm">{p.stock}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => { setEditing(p); setOpen(true); }} className="w-8 h-8 grid place-items-center rounded-lg text-neutral-600 hover:bg-neutral-100"><Pencil className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => setConfirmDel(p)} className="w-8 h-8 grid place-items-center rounded-lg text-red-600 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      {open && <ProductForm initial={editing} categories={cats} onClose={() => setOpen(false)} onSaved={() => { setOpen(false); load(); }} />}
+      {confirmDel && (
+        <div className="fixed inset-0 z-50 bg-black/40 grid place-items-center p-4">
+          <div className="bg-white rounded-2xl p-5 max-w-sm w-full">
+            <div className="font-extrabold text-lg">Delete this product?</div>
+            <div className="text-sm text-neutral-500 mt-1">“{confirmDel.name}” will be permanently removed.</div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setConfirmDel(null)} className="flex-1 h-11 rounded-full bg-neutral-100 font-semibold text-sm">Cancel</button>
+              <button onClick={() => del(confirmDel.id)} className="flex-1 h-11 rounded-full bg-red-600 text-white font-semibold text-sm">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdminProducts;

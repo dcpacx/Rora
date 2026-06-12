@@ -1,25 +1,53 @@
-.App {
+/* Phone-frame shell — mobile-first */
+.phone-shell-outer {
   min-height: 100vh;
-  background: #ffffff;
-  color: #111;
+  background: #e8efe7;
+  background-image: radial-gradient(circle at 20% 10%, rgba(16, 185, 129, 0.10) 0%, transparent 40%),
+                    radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.08) 0%, transparent 50%);
+  padding: 12px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
 }
 
-/* Hide scrollbar for category strip */
+.phone-shell {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  background: #ffffff;
+  overflow: hidden;
+  min-height: calc(100vh - 0px);
+  height: calc(100vh - 0px);
+}
+
+.phone-shell-content {
+  position: absolute;
+  inset: 0 0 64px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* On desktop, show as a centered phone */
+@media (min-width: 640px) {
+  .phone-shell-outer { padding: 28px 0; }
+  .phone-shell {
+    width: 420px;
+    max-width: 420px;
+    border-radius: 38px;
+    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.25), 0 0 0 8px #0c0c0c, 0 0 0 9px #2a2a2a;
+    height: 860px;
+    min-height: 860px;
+  }
+}
+
+/* Admin panel takes full screen */
+body.admin-mode .phone-shell-outer { display: none; }
+
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Subtle product card hover */
 .product-card { transition: box-shadow 200ms ease, transform 200ms ease, border-color 200ms ease; }
-.product-card:hover { box-shadow: 0 8px 24px -10px rgba(0,0,0,0.15); transform: translateY(-2px); border-color: #e5e7eb; }
+.product-card:active { transform: scale(0.985); }
 
-/* Heart button */
-.wish-btn { transition: background-color 150ms ease, color 150ms ease, transform 150ms ease; }
-.wish-btn:hover { transform: scale(1.06); }
-
-/* Category pill hover */
-.cat-link { transition: color 150ms ease; }
-.cat-link:hover { color: #ef4444; }
-
-/* Marquee-ish smooth scroll for store chips */
-.chip { transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
-.chip:hover { background-color: #fff; border-color: #d4d4d8; }
+button { -webkit-tap-highlight-color: transparent; }

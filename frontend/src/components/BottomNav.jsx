@@ -1,0 +1,38 @@
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Home, LayoutGrid, ShoppingBag, User, ClipboardList } from 'lucide-react';
+import { useCart } from '../contexts/CartContext';
+
+const items = [
+  { to: '/', label: 'Home', icon: Home },
+  { to: '/categories', label: 'Categories', icon: LayoutGrid },
+  { to: '/cart', label: 'Cart', icon: ShoppingBag, badge: true },
+  { to: '/orders', label: 'Orders', icon: ClipboardList },
+  { to: '/profile', label: 'Profile', icon: User },
+];
+
+const BottomNav = () => {
+  const { pathname } = useLocation();
+  const { cartCount } = useCart();
+  return (
+    <nav className="absolute bottom-0 inset-x-0 bg-white border-t border-neutral-200 z-40">
+      <div className="grid grid-cols-5 h-16">
+        {items.map((it) => {
+          const active = pathname === it.to || (it.to !== '/' && pathname.startsWith(it.to));
+          return (
+            <Link key={it.to} to={it.to} className="relative flex flex-col items-center justify-center gap-0.5 transition-colors">
+              <it.icon className={`w-5 h-5 ${active ? 'text-emerald-600' : 'text-neutral-500'}`} />
+              <span className={`text-[10.5px] font-medium ${active ? 'text-emerald-600' : 'text-neutral-500'}`}>{it.label}</span>
+              {it.badge && cartCount > 0 && (
+                <span className="absolute top-1.5 right-[26%] bg-red-500 text-white text-[9px] font-semibold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">{cartCount}</span>
+              )}
+              {active && <span className="absolute top-0 w-8 h-0.5 bg-emerald-600 rounded-b-full" />}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+};
+
+export default BottomNav;
