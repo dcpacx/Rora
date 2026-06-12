@@ -240,6 +240,42 @@ backend:
         agent: "testing"
         comment: "✓ PASS - Admin analytics endpoint working correctly. Tested: (11) GET /admin/analytics returns all required fields: series (14 items with date, revenue, orders), statusCounts, methodCounts, topProducts, totalRevenue (৳3600.0), totalOrders (4). All data structures correct and complete."
 
+  - task: "User profile update endpoint"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✓ PASS - PATCH /api/auth/me updates user profile (name, phone, avatar). Tested with base64 avatar data URL, all fields updated correctly and returned in both PATCH response and subsequent GET /api/auth/me."
+
+  - task: "Customer messaging endpoints"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✓ PASS - Customer messaging working correctly. Tested: (1) POST /api/messages creates message with fromAdmin=false, validates empty text returns 400, (2) GET /api/messages returns customer's messages and auto-marks admin messages as read, (3) GET /api/messages/unread-count correctly counts only unread admin messages (customer's own messages don't count). All endpoints working as expected."
+
+  - task: "Admin messaging and support endpoints"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✓ PASS - Admin messaging endpoints working correctly. Tested: (1) GET /api/admin/messages/threads returns list of customer threads with lastMessage, unread count, and user details, (2) GET /api/admin/messages/{user_id} returns messages for specific customer and marks customer messages as read, (3) POST /api/admin/messages sends admin reply with fromAdmin=true and creates notification for customer (verified notification appears in customer's /api/notifications), (4) Empty text validation returns 400, (5) Non-admin access correctly returns 403. All authorization checks working properly."
+
 frontend:
   - task: "Mobile-first storefront with bottom nav"
     implemented: true
@@ -256,7 +292,7 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: false
 
 test_plan:
@@ -276,3 +312,5 @@ agent_communication:
     message: "✅ REGRESSION TESTING COMPLETE - All 9 regression tests passed successfully for newly added features. Tested: (1) Admin login with credentials admin@organicshop.com/admin123, (2) GET /admin/users returns customers with orderCount and totalSpent numeric fields (found 3 customers), (3) GET /admin/users without auth correctly returns 401, (4) GET /admin/users with customer token correctly returns 403, (5) GET /admin/users/{user_id} returns {user, orders} structure, (6) POST /products with tags=['best-seller', 'raw'] creates product with tags array, (7) PUT /products/{id} with tags=['premium'] correctly replaces tags, (8) GET /products/{slug} returns tags field, (9) DELETE /products/{id} cleanup successful. All new endpoints working correctly with proper authentication and authorization."
   - agent: "testing"
     message: "✅ NOTIFICATION & ADMIN ENDPOINTS TESTING COMPLETE - All 11 test steps passed successfully. Comprehensive testing of new features: (1) Signup creates welcome notification 'Welcome to Sobuj! 🌱', (2) GET /notifications returns notification list, (3) GET /notifications/unread-count returns correct count, (4) POST /notifications/{id}/read marks notification read and updates unread count, (5) POST /notifications/read-all is idempotent, (6) Order creation triggers 'Order placed' notification, (7) Admin order status update to 'shipped' triggers customer notification, (8) POST /admin/categories creates category successfully, (9) PUT /admin/categories/{id} updates category, (10) DELETE /admin/categories/{id} deletes category, (11) GET /admin/analytics returns all required fields (series with 14 items, statusCounts, methodCounts, topProducts, totalRevenue, totalOrders). All notification flows and admin endpoints working correctly with proper authentication."
+  - agent: "testing"
+    message: "✅ MESSAGING/SUPPORT REGRESSION TEST COMPLETE - All 13 test steps passed successfully. Comprehensive testing of new messaging features: (1) Fresh customer signup with Bengali name/email, (2) Admin login successful, (3) PATCH /api/auth/me updates name, phone, and avatar (base64 data URL) - verified with GET /api/auth/me, (4) POST /api/messages creates customer message with fromAdmin=false, (5) GET /api/messages returns customer's messages, (6) GET /api/messages/unread-count returns 0 (own messages don't count), (7) GET /api/admin/messages/threads returns threads with lastMessage and unread count, (8) GET /api/admin/messages/{customer_id} returns customer's messages, (9) POST /api/admin/messages sends admin reply and creates notification for customer (verified in /api/notifications), (10) GET /api/messages/unread-count returns 1 after admin reply, (11) GET /api/messages auto-marks admin messages as read and unread count becomes 0, (12) POST /api/admin/messages with empty text correctly returns 400, (13) Non-admin access to /api/admin/messages/threads correctly returns 403. All messaging endpoints working correctly with proper validation, authorization, and notification integration."

@@ -31,11 +31,11 @@ const MobileHeader = ({ title, back = false, hideSearch = false }) => {
 
   // Home header — user profile left, notification bell right (no title)
   return (
-    <div className="lg:hidden bg-emerald-600 text-white px-4 pt-3 pb-3 sticky top-0 z-30">
+    <div className="lg:hidden bg-emerald-700 text-white px-4 pt-3 pb-3 sticky top-0 z-30">
       <div className="flex items-center justify-between">
         <Link to={user ? '/profile' : '/login'} className="flex items-center gap-2 -ml-1 pr-2 py-0.5 rounded-full hover:bg-white/10 transition-colors">
-          <div className="w-9 h-9 rounded-full bg-white/20 grid place-items-center text-sm font-extrabold">
-            {user ? user.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
+          <div className="w-9 h-9 rounded-full bg-white/20 grid place-items-center text-sm font-extrabold overflow-hidden">
+            {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : (user ? user.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />)}
           </div>
           <div className="leading-tight text-left">
             <div className="text-[10.5px] opacity-80">{user ? 'Welcome back' : 'Tap to'}</div>
@@ -45,7 +45,7 @@ const MobileHeader = ({ title, back = false, hideSearch = false }) => {
         <button onClick={() => navigate('/notifications')} className="relative w-10 h-10 grid place-items-center rounded-full bg-white/15 hover:bg-white/25 transition-colors">
           <Bell className="w-4.5 h-4.5" />
           {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center border-2 border-emerald-600">
+            <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center border-2 border-emerald-700">
               {unread > 99 ? '99+' : unread}
             </span>
           )}
@@ -53,7 +53,7 @@ const MobileHeader = ({ title, back = false, hideSearch = false }) => {
       </div>
       <button onClick={() => navigate('/search')} className="mt-3 w-full h-11 rounded-full bg-white text-neutral-500 px-4 flex items-center gap-2 text-sm">
         <Search className="w-4 h-4" />
-        <span>Search for honey, oil, spices…</span>
+        <span>Search honey, oil, spices…</span>
       </button>
     </div>
   );

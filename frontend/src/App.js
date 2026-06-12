@@ -7,6 +7,7 @@ import { NotifProvider } from './contexts/NotifContext';
 import { Protected } from './components/Protected';
 import BottomNav from './components/BottomNav';
 import DesktopNav from './components/DesktopNav';
+import ChatWidget from './components/ChatWidget';
 import Home from './pages/Home';
 import Categories from './pages/Categories';
 import CategoryPage from './pages/Category';
@@ -15,8 +16,10 @@ import CartPage from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import Profile from './pages/Profile';
+import EditProfile from './pages/EditProfile';
 import Search from './pages/Search';
 import Notifications from './pages/Notifications';
+import Messages from './pages/Messages';
 import { Login, Signup } from './pages/Auth';
 import { AdminLayout, AdminDashboard } from './pages/admin/Dashboard';
 import AdminProducts from './pages/admin/Products';
@@ -24,6 +27,7 @@ import AdminOrders from './pages/admin/Orders';
 import AdminUsers from './pages/admin/Users';
 import AdminCategoriesPage from './pages/admin/Categories';
 import AdminAnalytics from './pages/admin/Analytics';
+import AdminMessages from './pages/admin/Messages';
 import { Toaster } from './components/ui/toaster';
 import { ADMIN_PATH } from './lib/admin-path';
 
@@ -36,6 +40,7 @@ const Shell = ({ children }) => {
       {!hideDesktopNav && <DesktopNav />}
       <div className="app-content">{children}</div>
       {!hideNav && <BottomNav />}
+      <ChatWidget />
     </div>
   );
 };
@@ -52,6 +57,7 @@ const AppRoutes = () => {
           <Route path="categories" element={<AdminCategoriesPage />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="messages" element={<AdminMessages />} />
         </Route>
       </Routes>
     );
@@ -67,7 +73,9 @@ const AppRoutes = () => {
         <Route path="/checkout" element={<Protected><Checkout /></Protected>} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/edit" element={<Protected><EditProfile /></Protected>} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/messages" element={<Messages />} />
         <Route path="/search" element={<Search />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />

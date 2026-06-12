@@ -3,7 +3,6 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/use-toast';
 import { Leaf, Eye, EyeOff } from 'lucide-react';
-import { ADMIN_PATH } from '../lib/admin-path';
 
 export const Login = () => {
   const { login } = useAuth();
@@ -22,7 +21,7 @@ export const Login = () => {
     try {
       const u = await login(email, password);
       toast({ title: `Welcome back, ${u.name.split(' ')[0]}!` });
-      nav(u.role === 'admin' ? ADMIN_PATH : next);
+      nav(next);
     } catch (e) {
       toast({ title: 'Login failed', description: e.response?.data?.detail || 'Check your credentials', variant: 'destructive' });
     } finally { setLoading(false); }
@@ -31,8 +30,8 @@ export const Login = () => {
   return (
     <div className="min-h-full bg-white px-6 pt-12 pb-8">
       <div className="text-center mb-8">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-600 grid place-items-center"><Leaf className="w-7 h-7 text-white" /></div>
-        <h1 className="text-2xl font-extrabold mt-3">Welcome back</h1>
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-700 grid place-items-center"><Leaf className="w-7 h-7 text-white" /></div>
+        <h1 className="text-2xl font-extrabold mt-3" style={{ fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', Inter, sans-serif" }}>প্রকৃতির ঘ্রাণ</h1>
         <p className="text-sm text-neutral-500 mt-1">Sign in to continue shopping organic.</p>
       </div>
       <form onSubmit={submit} className="space-y-3">
@@ -41,10 +40,9 @@ export const Login = () => {
           <input type={show ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="w-full h-12 px-4 pr-11 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
           <button type="button" onClick={() => setShow(!show)} className="absolute inset-y-0 right-3 grid place-items-center text-neutral-500">{show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
         </div>
-        <button disabled={loading} type="submit" className="w-full h-12 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-60">{loading ? 'Signing in…' : 'Sign in'}</button>
+        <button disabled={loading} type="submit" className="w-full h-12 rounded-full bg-emerald-700 text-white font-semibold hover:bg-emerald-800 disabled:opacity-60">{loading ? 'Signing in…' : 'Sign in'}</button>
       </form>
       <div className="text-center mt-5 text-sm text-neutral-500">New here? <Link to="/signup" className="text-emerald-700 font-semibold">Create account</Link></div>
-      <div className="mt-8 text-center text-[11px] text-neutral-400">Demo admin: <span className="font-mono">admin@organicshop.com / admin123</span></div>
     </div>
   );
 };
@@ -71,16 +69,16 @@ export const Signup = () => {
   return (
     <div className="min-h-full bg-white px-6 pt-10 pb-8">
       <div className="text-center mb-6">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-600 grid place-items-center"><Leaf className="w-7 h-7 text-white" /></div>
-        <h1 className="text-2xl font-extrabold mt-3">Create account</h1>
-        <p className="text-sm text-neutral-500 mt-1">Join Sobuj — fresh organic, delivered.</p>
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-700 grid place-items-center"><Leaf className="w-7 h-7 text-white" /></div>
+        <h1 className="text-2xl font-extrabold mt-3" style={{ fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', Inter, sans-serif" }}>প্রকৃতির ঘ্রাণ</h1>
+        <p className="text-sm text-neutral-500 mt-1">Create your account — pure organic, delivered.</p>
       </div>
       <form onSubmit={submit} className="space-y-3">
         <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" className="w-full h-12 px-4 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
         <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" className="w-full h-12 px-4 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
         <input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Mobile number" inputMode="tel" className="w-full h-12 px-4 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
         <input required type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Password (min 6 chars)" minLength={6} className="w-full h-12 px-4 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
-        <button disabled={loading} type="submit" className="w-full h-12 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-60">{loading ? 'Creating…' : 'Create account'}</button>
+        <button disabled={loading} type="submit" className="w-full h-12 rounded-full bg-emerald-700 text-white font-semibold hover:bg-emerald-800 disabled:opacity-60">{loading ? 'Creating…' : 'Create account'}</button>
       </form>
       <div className="text-center mt-5 text-sm text-neutral-500">Already have an account? <Link to="/login" className="text-emerald-700 font-semibold">Sign in</Link></div>
     </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { api, formatBDT } from '../../lib/api';
-import { LayoutDashboard, Package, ClipboardList, LogOut, ArrowUpRight, Users, TrendingUp, Clock, BarChart3, FolderTree, Menu, X, Leaf, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Package, ClipboardList, LogOut, ArrowUpRight, Users, TrendingUp, Clock, BarChart3, FolderTree, Menu, X, Leaf, ChevronRight, MessageCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ADMIN_PATH } from '../../lib/admin-path';
 
@@ -12,6 +12,7 @@ const navItems = [
   { to: `${ADMIN_PATH}/categories`, label: 'Categories', icon: FolderTree },
   { to: `${ADMIN_PATH}/orders`, label: 'Orders', icon: ClipboardList },
   { to: `${ADMIN_PATH}/users`, label: 'Customers', icon: Users },
+  { to: `${ADMIN_PATH}/messages`, label: 'Messages', icon: MessageCircle },
 ];
 
 export const AdminLayout = () => {
@@ -28,9 +29,9 @@ export const AdminLayout = () => {
       {/* Desktop sidebar */}
       <aside className="w-60 bg-white border-r border-neutral-200 p-4 hidden lg:flex flex-col">
         <div className="flex items-center gap-2 px-2 mb-6">
-          <div className="w-9 h-9 rounded-lg bg-emerald-600 grid place-items-center"><Leaf className="w-5 h-5 text-white" /></div>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-700 to-emerald-500 grid place-items-center shadow-sm"><Leaf className="w-5 h-5 text-white" /></div>
           <div>
-            <div className="font-extrabold text-neutral-900 leading-tight">Sobuj</div>
+            <div className="font-extrabold text-neutral-900 leading-tight" style={{ fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', Inter, sans-serif" }}>প্রকৃতির ঘ্রাণ</div>
             <div className="text-[10.5px] text-neutral-500">Admin panel</div>
           </div>
         </div>
@@ -56,9 +57,9 @@ export const AdminLayout = () => {
           <aside onClick={(e) => e.stopPropagation()} className="absolute left-0 top-0 bottom-0 w-72 max-w-[82%] bg-white p-4 flex flex-col shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-lg bg-emerald-600 grid place-items-center"><Leaf className="w-5 h-5 text-white" /></div>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-700 to-emerald-500 grid place-items-center"><Leaf className="w-5 h-5 text-white" /></div>
                 <div>
-                  <div className="font-extrabold leading-tight">Sobuj</div>
+                  <div className="font-extrabold leading-tight" style={{ fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', Inter, sans-serif" }}>প্রকৃতির ঘ্রাণ</div>
                   <div className="text-[10.5px] text-neutral-500">Admin panel</div>
                 </div>
               </div>
@@ -86,8 +87,8 @@ export const AdminLayout = () => {
         <div className="lg:hidden bg-white border-b border-neutral-200 px-3 h-14 flex items-center justify-between sticky top-0 z-30">
           <button onClick={() => setDrawerOpen(true)} className="w-9 h-9 grid place-items-center rounded-lg hover:bg-neutral-100"><Menu className="w-5 h-5" /></button>
           <div className="flex items-center gap-1.5">
-            <div className="w-7 h-7 rounded-lg bg-emerald-600 grid place-items-center"><Leaf className="w-4 h-4 text-white" /></div>
-            <div className="font-extrabold text-sm">Sobuj Admin</div>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-700 to-emerald-500 grid place-items-center"><Leaf className="w-4 h-4 text-white" /></div>
+            <div className="font-extrabold text-sm" style={{ fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', Inter, sans-serif" }}>প্রকৃতির ঘ্রাণ</div>
           </div>
           <Link to="/" className="text-xs font-semibold text-neutral-600">Shop</Link>
         </div>
@@ -118,11 +119,17 @@ export const AdminDashboard = () => {
   ];
   return (
     <div>
-      <div>
-        <h1 className="text-xl md:text-2xl font-extrabold">Welcome back 👋</h1>
-        <p className="text-sm text-neutral-500 mt-1">Here’s what’s happening at Sobuj today.</p>
+      <div className="rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-500 text-white p-5 md:p-8 relative overflow-hidden mb-5">
+        <div className="relative z-10">
+          <div className="inline-flex items-center gap-1.5 bg-white/15 text-[10.5px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full">
+            <Sparkles className="w-3 h-3" /> Admin overview
+          </div>
+          <h1 className="text-2xl md:text-3xl font-extrabold mt-2.5 leading-tight">Welcome back 👋</h1>
+          <p className="text-[13px] md:text-sm opacity-90 mt-1 max-w-md">Here's what's happening at your shop today.</p>
+        </div>
+        <Leaf className="absolute -right-6 -bottom-6 w-32 h-32 md:w-44 md:h-44 text-white/15 -rotate-12" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-3 mt-4 md:mt-5">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-3">
         {cards.map((c, i) => (
           <Link key={i} to={c.to} className="rounded-2xl bg-white border border-neutral-100 p-3 md:p-4 hover:border-neutral-300 transition-colors">
             <div className={`w-8 h-8 md:w-9 md:h-9 rounded-lg grid place-items-center ${c.color}`}><c.i className="w-4 h-4" /></div>

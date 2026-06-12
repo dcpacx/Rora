@@ -40,9 +40,21 @@ class UserSignup(BaseModel):
     phone: str
     password: str
 
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    avatar: Optional[str] = None  # base64 data URL
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+class MessageCreate(BaseModel):
+    text: str
+
+class AdminMessageCreate(BaseModel):
+    userId: str
+    text: str
 
 class UserOut(BaseModel):
     id: str
@@ -219,7 +231,7 @@ async def signup(body: UserSignup):
     await db.users.insert_one(user)
     await push_notification(user['id'], 'Welcome to Sobuj! 🌱', 'Thanks for joining. Get ৳100 off your first order with code SOBUJ100.', 'system')
     token = create_token(user['id'], 'customer')
-    return {'token': token, 'user': {'id': user['id'], 'name': user['name'], 'email': user['email'], 'phone': user['phone'], 'role': user['role']}}
+    return {'token': token, 'user': {'id': user['id'], 'name': user['name'], 'email': user['email'], 'phone': user['phone'], 'role': user['role'], 'avatar': user.get('avatar')}}
 
 @api.post('/auth/login')
 async def login(body: UserLogin):
@@ -227,11 +239,113 @@ async def login(body: UserLogin):
     if not user or not verify_password(body.password, user['password']):
         raise HTTPException(401, 'Invalid email or password')
     token = create_token(user['id'], user.get('role', 'customer'))
-    return {'token': token, 'user': {'id': user['id'], 'name': user['name'], 'email': user['email'], 'phone': user['phone'], 'role': user.get('role', 'customer')}}
+    return {'token': token, 'user': {'id': user['id'], 'name': user['name'], 'email': user['email'], 'phone': user['phone'], 'role': user.get('role', 'customer'), 'avatar': user.get('avatar')}}
 
 @api.get('/auth/me')
 async def me(user = Depends(get_current_user)):
-    return {'id': user['id'], 'name': user['name'], 'email': user['email'], 'phone': user['phone'], 'role': user.get('role', 'customer')}
+    return {'id': user['id'], 'name': user['name'], 'email': user['email'], 'phone': user['phone'], 'role': user.get('role', 'customer'), 'avatar': user.get('avatar')}
+
+@api.patch('/auth/me')
+async def update_me(body: UserUpdate, user = Depends(get_current_user)):
+    update = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    if update:
+        await db.users.update_one({'id': user['id']}, {'$set': update})
+    u = await db.users.find_one({'id': user['id']})
+    return {'id': u['id'], 'name': u['name'], 'email': u['email'], 'phone': u['phone'], 'role': u.get('role', 'customer'), 'avatar': u.get('avatar')}
+
+
+# Messages (chat between customer & admin)
+@api.get('/messages')
+async def my_messages(user = Depends(get_current_user)):
+    msgs = await db.messages.find({'userId': user['id']}).sort('createdAt', 1).to_list(500)
+    for m in msgs: m.pop('_id', None)
+    # mark admin messages as read by this user
+    await db.messages.update_many({'userId': user['id'], 'fromAdmin': True, 'read': False}, {'$set': {'read': True}})
+    return msgs
+
+@api.get('/messages/unread-count')
+async def my_unread(user = Depends(get_current_user)):
+    c = await db.messages.count_documents({'userId': user['id'], 'fromAdmin': True, 'read': False})
+    return {'count': c}
+
+@api.post('/messages')
+async def send_message(body: MessageCreate, user = Depends(get_current_user)):
+    if not body.text or not body.text.strip():
+        raise HTTPException(400, 'Empty message')
+    msg = {
+        'id': str(uuid.uuid4()),
+        'userId': user['id'],
+        'userName': user['name'],
+        'text': body.text.strip()[:2000],
+        'fromAdmin': False,
+        'read': False,
+        'createdAt': datetime.utcnow().isoformat(),
+    }
+    await db.messages.insert_one(msg)
+    msg.pop('_id', None)
+    return msg
+
+@api.get('/admin/messages/threads')
+async def admin_threads(admin = Depends(get_admin)):
+    """List one entry per customer with last message + unread count for admin."""
+    pipeline = [
+        {'$sort': {'createdAt': -1}},
+        {'$group': {
+            '_id': '$userId',
+            'lastMessage': {'$first': '$$ROOT'},
+            'count': {'$sum': 1},
+            'unread': {'$sum': {'$cond': [{'$and': [{'$eq': ['$fromAdmin', False]}, {'$eq': ['$read', False]}]}, 1, 0]}},
+        }},
+        {'$sort': {'lastMessage.createdAt': -1}},
+    ]
+    out = []
+    async for d in db.messages.aggregate(pipeline):
+        lm = d['lastMessage']; lm.pop('_id', None)
+        u = await db.users.find_one({'id': d['_id']})
+        out.append({
+            'userId': d['_id'],
+            'userName': u['name'] if u else lm.get('userName', 'Unknown'),
+            'userEmail': u['email'] if u else None,
+            'userAvatar': u.get('avatar') if u else None,
+            'lastMessage': lm,
+            'count': d['count'],
+            'unread': d['unread'],
+        })
+    return out
+
+@api.get('/admin/messages/{user_id}')
+async def admin_thread(user_id: str, admin = Depends(get_admin)):
+    msgs = await db.messages.find({'userId': user_id}).sort('createdAt', 1).to_list(500)
+    for m in msgs: m.pop('_id', None)
+    await db.messages.update_many({'userId': user_id, 'fromAdmin': False, 'read': False}, {'$set': {'read': True}})
+    return msgs
+
+@api.post('/admin/messages')
+async def admin_send(body: AdminMessageCreate, admin = Depends(get_admin)):
+    if not body.text or not body.text.strip():
+        raise HTTPException(400, 'Empty message')
+    u = await db.users.find_one({'id': body.userId})
+    if not u: raise HTTPException(404, 'User not found')
+    msg = {
+        'id': str(uuid.uuid4()),
+        'userId': body.userId,
+        'userName': u['name'],
+        'text': body.text.strip()[:2000],
+        'fromAdmin': True,
+        'adminName': admin.get('name', 'Support'),
+        'read': False,
+        'createdAt': datetime.utcnow().isoformat(),
+    }
+    await db.messages.insert_one(msg)
+    msg.pop('_id', None)
+    # Notify the user
+    await push_notification(body.userId, 'New reply from support', body.text.strip()[:120], 'system')
+    return msg
+
+@api.get('/admin/messages-unread-count')
+async def admin_unread(admin = Depends(get_admin)):
+    c = await db.messages.count_documents({'fromAdmin': False, 'read': False})
+    return {'count': c}
 
 
 # Categories

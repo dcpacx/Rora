@@ -4,7 +4,6 @@ import { Search, Leaf, ShoppingBag, User, LayoutGrid, Home, LogOut, Bell } from 
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotifContext';
-import { ADMIN_PATH } from '../lib/admin-path';
 
 const navItems = [
   { to: '/', label: 'Home', icon: Home, exact: true },
@@ -14,7 +13,7 @@ const navItems = [
 const DesktopNav = () => {
   const { pathname } = useLocation();
   const { cartCount } = useCart();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout } = useAuth();
   const { unread } = useNotifications();
   const nav = useNavigate();
   const [q, setQ] = useState('');
@@ -32,10 +31,10 @@ const DesktopNav = () => {
     <header className="hidden lg:block sticky top-0 z-40 bg-white border-b border-neutral-200">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-6">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-emerald-600 grid place-items-center"><Leaf className="w-5 h-5 text-white" /></div>
+          <div className="w-9 h-9 rounded-xl bg-emerald-700 grid place-items-center"><Leaf className="w-5 h-5 text-white" /></div>
           <div className="leading-tight">
-            <div className="font-extrabold text-neutral-900">Sobuj <span className="font-light text-emerald-700">• সবুজ</span></div>
-            <div className="text-[10px] text-neutral-500 -mt-0.5">Pure. Organic. Local.</div>
+            <div className="font-extrabold text-neutral-900" style={{ fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', Inter, sans-serif" }}>প্রকৃতির ঘ্রাণ</div>
+            <div className="text-[10px] text-neutral-500 -mt-0.5">Pure · Organic · Local</div>
           </div>
         </Link>
 
@@ -51,7 +50,7 @@ const DesktopNav = () => {
           <div className="flex items-center h-11 rounded-full bg-neutral-100 border border-neutral-200 hover:border-neutral-300 focus-within:border-emerald-400 transition-colors overflow-hidden">
             <Search className="w-4 h-4 text-neutral-500 ml-4" />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search honey, oil, spices…" className="flex-1 h-full bg-transparent px-3 text-sm outline-none placeholder:text-neutral-500" />
-            <button type="submit" className="h-9 mr-1.5 px-4 rounded-full bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Search</button>
+            <button type="submit" className="h-9 mr-1.5 px-4 rounded-full bg-emerald-700 text-white text-sm font-medium hover:bg-emerald-800">Search</button>
           </div>
         </form>
 
@@ -72,7 +71,9 @@ const DesktopNav = () => {
           {user ? (
             <div className="relative">
               <button onClick={() => setOpen(!open)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100">
-                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white grid place-items-center text-sm font-bold">{user.name.charAt(0).toUpperCase()}</div>
+                <div className="w-8 h-8 rounded-full bg-emerald-700 text-white grid place-items-center text-sm font-bold overflow-hidden">
+                  {user.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : user.name.charAt(0).toUpperCase()}
+                </div>
                 <span className="text-sm font-medium hidden xl:inline">{user.name.split(' ')[0]}</span>
               </button>
               {open && (
@@ -84,14 +85,13 @@ const DesktopNav = () => {
                       <div className="text-[11px] text-neutral-500 truncate">{user.email}</div>
                     </div>
                     <Link to="/profile" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-neutral-50"><User className="w-4 h-4" /> Profile & orders</Link>
-                    {isAdmin && (<Link to={ADMIN_PATH} onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-neutral-50 text-emerald-700 font-semibold">Admin dashboard</Link>)}
                     <button onClick={() => { logout(); setOpen(false); nav('/'); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-red-50 text-red-600"><LogOut className="w-4 h-4" /> Logout</button>
                   </div>
                 </>
               )}
             </div>
           ) : (
-            <Link to="/login" className="ml-1 inline-flex items-center gap-2 bg-emerald-600 text-white text-sm font-semibold px-4 h-10 rounded-full hover:bg-emerald-700">Sign in</Link>
+            <Link to="/login" className="ml-1 inline-flex items-center gap-2 bg-emerald-700 text-white text-sm font-semibold px-4 h-10 rounded-full hover:bg-emerald-800">Sign in</Link>
           )}
         </div>
       </div>
