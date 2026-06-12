@@ -86,7 +86,11 @@ const Checkout = () => {
     })();
   }, []);
 
-  if (cart.length === 0 && !order) { nav('/cart'); return null; }
+  useEffect(() => {
+    if (cart.length === 0 && !order) nav('/cart');
+  }, [cart.length, order, nav]);
+
+  if (cart.length === 0 && !order) return null;
 
   const discount = coupon?.discount || 0;
   const total = Math.max(0, subtotal + delivery - discount);

@@ -74,20 +74,20 @@ const ProductPage = () => {
 
           {/* Desktop action buttons (inline) */}
           <div className="hidden lg:flex items-center gap-3 mt-6">
-            <button onClick={add} className="flex-1 h-12 rounded-full border border-emerald-600 text-emerald-700 font-semibold inline-flex items-center justify-center gap-2 hover:bg-emerald-50">
+            <button data-testid="product-add-to-cart" onClick={add} className="flex-1 h-12 rounded-full border border-emerald-600 text-emerald-700 font-semibold inline-flex items-center justify-center gap-2 hover:bg-emerald-50">
               <ShoppingBag className="w-4 h-4" /> Add to cart
             </button>
-            <button onClick={buy} className="flex-1 h-12 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700">Buy now</button>
+            <button data-testid="product-buy-now" onClick={buy} className="flex-1 h-12 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700">Buy now</button>
           </div>
         </div>
       </div>
 
       {/* Mobile sticky action bar */}
       <div className="lg:hidden fixed bottom-16 inset-x-0 bg-white border-t border-neutral-100 px-4 py-3 flex items-center gap-2 z-30">
-        <button onClick={add} className="flex-1 h-12 rounded-full border border-emerald-600 text-emerald-700 font-semibold inline-flex items-center justify-center gap-2 hover:bg-emerald-50">
+        <button data-testid="product-add-to-cart-mobile" onClick={add} className="flex-1 h-12 rounded-full border border-emerald-600 text-emerald-700 font-semibold inline-flex items-center justify-center gap-2 hover:bg-emerald-50">
           <ShoppingBag className="w-4 h-4" /> Add to cart
         </button>
-        <button onClick={buy} className="flex-1 h-12 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700">Buy now</button>
+        <button data-testid="product-buy-now-mobile" onClick={buy} className="flex-1 h-12 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700">Buy now</button>
       </div>
     </div>
   );

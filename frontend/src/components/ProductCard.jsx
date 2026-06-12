@@ -44,7 +44,7 @@ const ProductCard = ({ product }) => {
               {product.oldPrice && (<span className="text-[11px] text-neutral-400 line-through">৳{formatBDT(product.oldPrice)}</span>)}
             </div>
           </div>
-          <button onClick={add} className="w-8 h-8 rounded-full bg-emerald-600 text-white grid place-items-center hover:bg-emerald-700 transition-colors active:scale-95">
+          <button onClick={add} aria-label={`Add ${product.name} to cart`} data-testid={`product-add-to-cart-${product.slug}`} className="w-8 h-8 rounded-full bg-emerald-600 text-white grid place-items-center hover:bg-emerald-700 transition-colors active:scale-95">
             <Plus className="w-4 h-4" />
           </button>
         </div>
