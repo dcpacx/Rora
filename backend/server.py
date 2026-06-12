@@ -1,7 +1,9 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -14,6 +16,9 @@ from passlib.context import CryptContext
 from jose import jwt, JWTError
 import asyncio
 import random
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -29,7 +34,16 @@ TOKEN_EXP_HOURS = 24 * 7
 pwd_ctx = CryptContext(schemes=['bcrypt'], deprecated='auto')
 bearer = HTTPBearer(auto_error=False)
 
+limiter = Limiter(key_func=get_remote_address, default_limits=[])
+
 app = FastAPI()
+app.state.limiter = limiter
+
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(status_code=429, content={'detail': 'Too many requests. Please slow down and try again in a moment.'})
+
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
+
 api = APIRouter(prefix='/api')
 
 
@@ -241,6 +255,22 @@ class CouponApply(BaseModel):
     subtotal: float
 
 
+class ReviewCreate(BaseModel):
+    productId: str
+    rating: int  # 1..5
+    text: Optional[str] = ''
+
+class NewsletterSub(BaseModel):
+    email: str
+
+class PasswordForgot(BaseModel):
+    email: str
+
+class PasswordReset(BaseModel):
+    token: str
+    newPassword: str
+
+
 # ------------ Helpers ------------
 def hash_password(p: str) -> str: return pwd_ctx.hash(p)
 def verify_password(p: str, h: str) -> bool:
@@ -305,7 +335,8 @@ async def root(): return {'message': 'Organic Shop API'}
 
 # Auth
 @api.post('/auth/signup')
-async def signup(body: UserSignup):
+@limiter.limit('5/minute')
+async def signup(request: Request, body: UserSignup):
     if await db.users.find_one({'email': body.email}):
         raise HTTPException(400, 'Email already registered')
     user = {
@@ -323,7 +354,8 @@ async def signup(body: UserSignup):
     return {'token': token, 'user': {'id': user['id'], 'name': user['name'], 'email': user['email'], 'phone': user['phone'], 'role': user['role'], 'avatar': user.get('avatar')}}
 
 @api.post('/auth/login')
-async def login(body: UserLogin):
+@limiter.limit('10/minute')
+async def login(request: Request, body: UserLogin):
     user = await db.users.find_one({'email': body.email})
     if not user or not verify_password(body.password, user['password']):
         raise HTTPException(401, 'Invalid email or password')
@@ -647,16 +679,39 @@ async def list_categories():
 
 # Products
 @api.get('/products')
-async def list_products(category: Optional[str] = None, featured: Optional[bool] = None, q: Optional[str] = None):
+async def list_products(
+    category: Optional[str] = None,
+    featured: Optional[bool] = None,
+    q: Optional[str] = None,
+    minPrice: Optional[float] = None,
+    maxPrice: Optional[float] = None,
+    organic: Optional[bool] = None,
+    inStock: Optional[bool] = None,
+    sort: Optional[str] = 'newest',
+):
     query = {}
     if category: query['category'] = category
     if featured is not None: query['featured'] = featured
+    if organic is not None: query['organic'] = organic
+    if inStock is True: query['stock'] = {'$gt': 0}
+    if minPrice is not None or maxPrice is not None:
+        rng = {}
+        if minPrice is not None: rng['$gte'] = minPrice
+        if maxPrice is not None: rng['$lte'] = maxPrice
+        query['price'] = rng
     if q:
         query['$or'] = [
             {'name': {'$regex': q, '$options': 'i'}},
             {'description': {'$regex': q, '$options': 'i'}},
         ]
-    products = await db.products.find(query).sort('createdAt', -1).to_list(500)
+    sort_map = {
+        'newest': [('createdAt', -1)],
+        'price-asc': [('price', 1)],
+        'price-desc': [('price', -1)],
+        'rating': [('avgRating', -1), ('reviewCount', -1)],
+    }
+    cur = db.products.find(query).sort(sort_map.get(sort, sort_map['newest']))
+    products = await cur.to_list(500)
     for p in products: p.pop('_id', None)
     return products
 
@@ -712,6 +767,152 @@ async def update_product(product_id: str, body: ProductUpdate, admin = Depends(g
 async def delete_product(product_id: str, admin = Depends(get_admin)):
     res = await db.products.delete_one({'id': product_id})
     if res.deleted_count == 0: raise HTTPException(404, 'Product not found')
+    return {'ok': True}
+
+
+# Related products — same category, exclude self
+@api.get('/products/{slug}/related')
+async def related_products(slug: str, limit: int = 8):
+    p = await db.products.find_one({'slug': slug})
+    if not p: return []
+    cur = db.products.find({'category': p.get('category'), 'slug': {'$ne': slug}}).sort('createdAt', -1)
+    items = await cur.to_list(limit)
+    for it in items: it.pop('_id', None)
+    return items
+
+
+# Reviews — users who ordered a product can review it once
+@api.get('/products/{product_id}/reviews')
+async def list_reviews(product_id: str):
+    items = await db.reviews.find({'productId': product_id}).sort('createdAt', -1).to_list(200)
+    for r in items: r.pop('_id', None)
+    return items
+
+async def _recompute_product_rating(product_id: str):
+    pipeline = [
+        {'$match': {'productId': product_id}},
+        {'$group': {'_id': None, 'avg': {'$avg': '$rating'}, 'count': {'$sum': 1}}},
+    ]
+    avg, count = 0.0, 0
+    async for d in db.reviews.aggregate(pipeline):
+        avg = round(float(d.get('avg', 0) or 0), 2)
+        count = int(d.get('count', 0) or 0)
+    await db.products.update_one({'id': product_id}, {'$set': {'avgRating': avg, 'reviewCount': count}})
+
+@api.post('/reviews')
+async def create_review(body: ReviewCreate, user = Depends(get_current_user)):
+    if not 1 <= body.rating <= 5: raise HTTPException(400, 'Rating must be 1-5')
+    product = await db.products.find_one({'id': body.productId})
+    if not product: raise HTTPException(404, 'Product not found')
+    # must have ordered this product
+    has_ordered = await db.orders.find_one({'userId': user['id'], 'items.productId': body.productId})
+    if not has_ordered: raise HTTPException(403, 'You can only review products you have ordered')
+    # one review per user per product
+    existing = await db.reviews.find_one({'productId': body.productId, 'userId': user['id']})
+    review = {
+        'id': existing['id'] if existing else str(uuid.uuid4()),
+        'productId': body.productId,
+        'productSlug': product.get('slug'),
+        'userId': user['id'],
+        'userName': user['name'],
+        'rating': body.rating,
+        'text': (body.text or '').strip()[:1000],
+        'createdAt': existing['createdAt'] if existing else datetime.utcnow().isoformat(),
+        'updatedAt': datetime.utcnow().isoformat(),
+    }
+    if existing:
+        await db.reviews.update_one({'id': existing['id']}, {'$set': review})
+    else:
+        await db.reviews.insert_one(review)
+    await _recompute_product_rating(body.productId)
+    review.pop('_id', None)
+    return review
+
+@api.delete('/admin/reviews/{review_id}')
+async def admin_delete_review(review_id: str, admin = Depends(get_admin)):
+    r = await db.reviews.find_one({'id': review_id})
+    if not r: raise HTTPException(404, 'Review not found')
+    await db.reviews.delete_one({'id': review_id})
+    await _recompute_product_rating(r['productId'])
+    return {'ok': True}
+
+@api.get('/admin/reviews')
+async def admin_list_reviews(admin = Depends(get_admin)):
+    items = await db.reviews.find().sort('createdAt', -1).to_list(500)
+    for r in items: r.pop('_id', None)
+    return items
+
+
+# Wishlist — stored as array of productIds on user
+@api.get('/auth/me/wishlist')
+async def get_wishlist(user = Depends(get_current_user)):
+    u = await db.users.find_one({'id': user['id']})
+    ids = u.get('wishlist', []) or []
+    if not ids: return []
+    products = await db.products.find({'id': {'$in': ids}}).to_list(200)
+    for p in products: p.pop('_id', None)
+    return products
+
+@api.post('/auth/me/wishlist/{product_id}')
+async def toggle_wishlist(product_id: str, user = Depends(get_current_user)):
+    p = await db.products.find_one({'id': product_id})
+    if not p: raise HTTPException(404, 'Product not found')
+    u = await db.users.find_one({'id': user['id']})
+    items = u.get('wishlist', []) or []
+    in_list = product_id in items
+    if in_list:
+        items = [i for i in items if i != product_id]
+    else:
+        items.append(product_id)
+    await db.users.update_one({'id': user['id']}, {'$set': {'wishlist': items}})
+    return {'inWishlist': not in_list, 'wishlistCount': len(items)}
+
+
+# Newsletter subscriptions
+@api.post('/newsletter')
+async def subscribe_newsletter(body: NewsletterSub):
+    email = body.email.strip().lower()
+    if not email or '@' not in email: raise HTTPException(400, 'Invalid email')
+    existing = await db.newsletter.find_one({'email': email})
+    if existing: return {'ok': True, 'alreadySubscribed': True}
+    await db.newsletter.insert_one({'id': str(uuid.uuid4()), 'email': email, 'createdAt': datetime.utcnow().isoformat()})
+    return {'ok': True, 'alreadySubscribed': False}
+
+@api.get('/admin/newsletter')
+async def list_newsletter(admin = Depends(get_admin)):
+    items = await db.newsletter.find().sort('createdAt', -1).to_list(1000)
+    for it in items: it.pop('_id', None)
+    return items
+
+
+# Password reset (demo: token returned in response and logged; in prod, send via email)
+@api.post('/auth/forgot')
+@limiter.limit('5/minute')
+async def forgot_password(request: Request, body: PasswordForgot):
+    email = body.email.strip().lower()
+    u = await db.users.find_one({'email': email})
+    # Always respond OK to prevent email enumeration
+    if not u: return {'ok': True}
+    token = str(uuid.uuid4()).replace('-', '')[:32]
+    expires = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+    await db.password_resets.insert_one({'token': token, 'userId': u['id'], 'expiresAt': expires, 'used': False, 'createdAt': datetime.utcnow().isoformat()})
+    logging.info(f"Password reset token for {email}: {token}")
+    # Return the token in the response for demo; in production this should be sent via email only
+    return {'ok': True, 'resetToken': token, 'note': 'Token shown for demo; in production this is sent via email.'}
+
+@api.post('/auth/reset')
+@limiter.limit('5/minute')
+async def reset_password(request: Request, body: PasswordReset):
+    if len(body.newPassword) < 6: raise HTTPException(400, 'Password too short (min 6)')
+    rec = await db.password_resets.find_one({'token': body.token})
+    if not rec or rec.get('used'): raise HTTPException(400, 'Invalid or used token')
+    try:
+        if datetime.fromisoformat(rec['expiresAt']) < datetime.utcnow():
+            raise HTTPException(400, 'Token expired')
+    except ValueError:
+        raise HTTPException(400, 'Token invalid')
+    await db.users.update_one({'id': rec['userId']}, {'$set': {'password': hash_password(body.newPassword)}})
+    await db.password_resets.update_one({'token': body.token}, {'$set': {'used': True}})
     return {'ok': True}
 
 
@@ -784,9 +985,13 @@ async def create_order(body: OrderCreate, user = Depends(get_current_user)):
         # bKash/Nagad: pending order, pending payment verification by admin
         'status': 'pending',
         'paymentStatus': 'unpaid' if body.paymentMethod == 'cod' else 'pending',
+        'statusHistory': [{'status': 'pending', 'at': datetime.utcnow().isoformat(), 'by': 'system'}],
         'createdAt': datetime.utcnow().isoformat(),
     }
     await db.orders.insert_one(order)
+    # decrement stock per item
+    for item in body.items:
+        await db.products.update_one({'id': item.productId, 'stock': {'$gte': item.qty}}, {'$inc': {'stock': -item.qty}})
     # increment coupon usedCount if applied
     if body.couponCode:
         await db.coupons.update_one({'code': body.couponCode.strip().upper()}, {'$inc': {'usedCount': 1}})
@@ -823,7 +1028,9 @@ async def admin_orders(admin = Depends(get_admin)):
 async def admin_update_order(order_id: str, body: OrderStatusUpdate, admin = Depends(get_admin)):
     o = await db.orders.find_one({'id': order_id})
     if not o: raise HTTPException(404, 'Order not found')
-    await db.orders.update_one({'id': order_id}, {'$set': {'status': body.status}})
+    history = o.get('statusHistory', []) or []
+    history.append({'status': body.status, 'at': datetime.utcnow().isoformat(), 'by': admin['name']})
+    await db.orders.update_one({'id': order_id}, {'$set': {'status': body.status, 'statusHistory': history}})
     status_msgs = {
         'confirmed': 'has been confirmed. Preparing for dispatch.',
         'shipped': 'is on the way! Track from your orders.',
@@ -1076,10 +1283,25 @@ async def seed():
 
 app.include_router(api)
 
+# Security headers middleware
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+# CORS — narrow to known origins in production via CORS_ORIGINS env (comma-separated).
+_cors_env = os.environ.get('CORS_ORIGINS', '').strip()
+_cors_origins = [o.strip() for o in _cors_env.split(',') if o.strip()] if _cors_env else ['*']
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=['*'],
+    allow_origins=_cors_origins,
     allow_methods=['*'],
     allow_headers=['*'],
 )

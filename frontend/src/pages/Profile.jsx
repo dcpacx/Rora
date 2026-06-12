@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { User, LogOut, ChevronRight, Phone, Mail, ClipboardList, HelpCircle, Leaf, Bell, Pencil, MessageCircle, MapPin, ShieldCheck } from 'lucide-react';
+import { User, LogOut, ChevronRight, Phone, Mail, ClipboardList, HelpCircle, Leaf, Bell, Pencil, MessageCircle, MapPin, ShieldCheck, Heart } from 'lucide-react';
 import MobileHeader from '../components/MobileHeader';
 import { ADMIN_PATH } from '../lib/admin-path';
 
@@ -62,6 +62,7 @@ const Profile = () => {
 
         <div className="mt-4 space-y-2">
           <ProfileRow icon={MapPin} label="Address book" to="/profile/addresses" testid="profile-row-addresses" />
+          <ProfileRow icon={Heart} label="Wishlist" to="/wishlist" testid="profile-row-wishlist" />
           <ProfileRow icon={ClipboardList} label="My orders" to="/orders" testid="profile-row-orders" />
           <ProfileRow icon={Bell} label="Notifications" to="/notifications" testid="profile-row-notifications" />
           <ProfileRow icon={MessageCircle} label="Messages" to="/messages" testid="profile-row-messages" />

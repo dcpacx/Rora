@@ -42,6 +42,7 @@ export const Login = () => {
         </div>
         <button data-testid="login-submit" disabled={loading} type="submit" className="w-full h-12 rounded-full bg-emerald-700 text-white font-semibold hover:bg-emerald-800 disabled:opacity-60">{loading ? 'Signing in…' : 'Sign in'}</button>
       </form>
+      <div className="text-center mt-3"><Link to="/forgot-password" data-testid="login-forgot-link" className="text-[12.5px] text-emerald-700 font-semibold hover:text-emerald-800 transition-colors">Forgot password?</Link></div>
       <div className="text-center mt-5 text-sm text-neutral-500">New here? <Link to="/signup" className="text-emerald-700 font-semibold">Create account</Link></div>
     </div>
   );

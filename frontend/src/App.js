@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-route
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { NotifProvider } from './contexts/NotifContext';
+import { WishlistProvider } from './contexts/WishlistContext';
 import { Protected } from './components/Protected';
 import BottomNav from './components/BottomNav';
 import DesktopNav from './components/DesktopNav';
@@ -19,6 +20,8 @@ import OrderDetail from './pages/OrderDetail';
 import Profile from './pages/Profile';
 import EditProfile from './pages/EditProfile';
 import Addresses from './pages/Addresses';
+import Wishlist from './pages/Wishlist';
+import { ForgotPassword, ResetPassword } from './pages/PasswordReset';
 import Search from './pages/Search';
 import Notifications from './pages/Notifications';
 import Messages from './pages/Messages';
@@ -34,6 +37,8 @@ import AdminMessages from './pages/admin/Messages';
 import AdminSettings from './pages/admin/Settings';
 import AdminBanners from './pages/admin/Banners';
 import AdminCoupons from './pages/admin/Coupons';
+import AdminReviews from './pages/admin/Reviews';
+import AdminNewsletter from './pages/admin/Newsletter';
 import { Toaster } from './components/ui/toaster';
 import { ADMIN_PATH } from './lib/admin-path';
 import { Leaf } from 'lucide-react';
@@ -78,6 +83,8 @@ const AppRoutes = () => {
           <Route path="messages" element={<AdminMessages />} />
           <Route path="banners" element={<AdminBanners />} />
           <Route path="coupons" element={<AdminCoupons />} />
+          <Route path="reviews" element={<AdminReviews />} />
+          <Route path="newsletter" element={<AdminNewsletter />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
       </Routes>
@@ -97,6 +104,9 @@ const AppRoutes = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/edit" element={<Protected><EditProfile /></Protected>} />
         <Route path="/profile/addresses" element={<Protected><Addresses /></Protected>} />
+        <Route path="/wishlist" element={<Protected><Wishlist /></Protected>} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/search" element={<Search />} />
@@ -113,10 +123,12 @@ function App() {
     <AuthProvider>
       <CartProvider>
         <NotifProvider>
-          <BrowserRouter>
-            <AppRoutes />
-            <Toaster />
-          </BrowserRouter>
+          <WishlistProvider>
+            <BrowserRouter>
+              <AppRoutes />
+              <Toaster />
+            </BrowserRouter>
+          </WishlistProvider>
         </NotifProvider>
       </CartProvider>
     </AuthProvider>

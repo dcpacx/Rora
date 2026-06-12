@@ -64,27 +64,39 @@ const OrderDetail = () => {
           </div>
         </div>
 
-        {/* Tracker */}
+        {/* Tracker — vertical timeline */}
         <div className="mt-4 rounded-2xl bg-white border border-neutral-100 p-4">
           <h3 className="font-extrabold text-sm mb-3">Order tracking</h3>
           {cancelled ? (
             <div className="flex items-center gap-2 text-red-600 text-sm font-semibold"><XIcon className="w-4 h-4" /> Order cancelled</div>
           ) : (
-            <div className="flex items-start justify-between gap-1">
+            <ol className="relative pl-7">
               {statusSteps.map((s, i) => {
                 const done = i <= activeIdx;
-                const Icon = done ? s.icon : CircleDashed;
+                const current = i === activeIdx;
+                const Icon = s.icon;
+                // Find time from statusHistory if present
+                const hist = (o.statusHistory || []).find((h) => h.status === s.key);
                 return (
-                  <div key={s.key} className="flex-1 flex flex-col items-center text-center">
-                    <div className={`w-9 h-9 rounded-full grid place-items-center ${done ? 'bg-emerald-600 text-white' : 'bg-neutral-100 text-neutral-400'}`}>
-                      <Icon className="w-4 h-4" />
+                  <li key={s.key} data-testid={`track-step-${s.key}`} className="relative pb-5 last:pb-0">
+                    {/* connector */}
+                    {i < statusSteps.length - 1 && (
+                      <span className={`absolute left-[-14px] top-7 bottom-0 w-0.5 ${i < activeIdx ? 'bg-emerald-500' : 'bg-neutral-200'}`} />
+                    )}
+                    {/* dot */}
+                    <span className={`absolute -left-[22px] top-0 w-7 h-7 rounded-full grid place-items-center ${done ? 'bg-emerald-600 text-white' : 'bg-neutral-100 text-neutral-400'} ${current ? 'ring-4 ring-emerald-100' : ''}`}>
+                      <Icon className="w-3.5 h-3.5" />
+                    </span>
+                    <div className="ml-2">
+                      <div className={`text-[13px] font-extrabold ${done ? 'text-neutral-900' : 'text-neutral-500'}`}>{s.label}</div>
+                      <div className="text-[11px] text-neutral-500">
+                        {hist ? new Date(hist.at).toLocaleString() : (current ? 'In progress' : (done ? '' : 'Pending'))}
+                      </div>
                     </div>
-                    <div className={`text-[10.5px] font-semibold mt-1.5 ${done ? 'text-emerald-700' : 'text-neutral-500'}`}>{s.label}</div>
-                    {i < statusSteps.length - 1 && (<div className={`w-full h-0.5 ${i < activeIdx ? 'bg-emerald-500' : 'bg-neutral-200'} -mt-[18px] z-[-1]`} style={{ marginInline: '-50%' }} />)}
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ol>
           )}
         </div>
 
@@ -109,6 +121,7 @@ const OrderDetail = () => {
         <div className="mt-4 rounded-2xl bg-white border border-neutral-100 p-4 text-sm">
           <div className="flex items-center justify-between"><span className="text-neutral-500">Subtotal</span><span className="font-semibold">৳{formatBDT(o.subtotal)}</span></div>
           <div className="flex items-center justify-between mt-1"><span className="text-neutral-500">Delivery</span><span className="font-semibold">{o.delivery === 0 ? 'Free' : `৳${formatBDT(o.delivery)}`}</span></div>
+          {o.discount > 0 && (<div className="flex items-center justify-between mt-1 text-emerald-700"><span>Discount {o.couponCode ? `(${o.couponCode})` : ''}</span><span className="font-semibold">-৳{formatBDT(o.discount)}</span></div>)}
           <div className="border-t border-dashed border-neutral-200 my-2" />
           <div className="flex items-center justify-between"><span className="font-bold">Total</span><span className="font-extrabold text-emerald-700">৳{formatBDT(o.total)}</span></div>
         </div>

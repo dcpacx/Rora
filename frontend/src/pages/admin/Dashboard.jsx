@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { api, formatBDT } from '../../lib/api';
-import { LayoutDashboard, Package, ClipboardList, LogOut, ArrowUpRight, Users, TrendingUp, Clock, BarChart3, FolderTree, Menu, X, Leaf, ChevronRight, MessageCircle, Sparkles, Settings as SettingsIcon, Image as ImageIcon, Tag } from 'lucide-react';
+import { LayoutDashboard, Package, ClipboardList, LogOut, ArrowUpRight, Users, TrendingUp, Clock, BarChart3, FolderTree, Menu, X, Leaf, ChevronRight, MessageCircle, Sparkles, Settings as SettingsIcon, Image as ImageIcon, Tag, Star, Mail } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ADMIN_PATH } from '../../lib/admin-path';
 
@@ -13,8 +13,10 @@ const navItems = [
   { to: `${ADMIN_PATH}/orders`, label: 'Orders', icon: ClipboardList },
   { to: `${ADMIN_PATH}/users`, label: 'Customers', icon: Users },
   { to: `${ADMIN_PATH}/messages`, label: 'Messages', icon: MessageCircle },
+  { to: `${ADMIN_PATH}/reviews`, label: 'Reviews', icon: Star },
   { to: `${ADMIN_PATH}/banners`, label: 'Banners', icon: ImageIcon },
   { to: `${ADMIN_PATH}/coupons`, label: 'Coupons', icon: Tag },
+  { to: `${ADMIN_PATH}/newsletter`, label: 'Newsletter', icon: Mail },
   { to: `${ADMIN_PATH}/settings`, label: 'Settings', icon: SettingsIcon },
 ];
 

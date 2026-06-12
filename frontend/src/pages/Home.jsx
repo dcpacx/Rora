@@ -126,12 +126,49 @@ const Home = () => {
         )}
       </section>
 
-      <div className="px-4 mt-6 lg:mt-12 max-w-7xl mx-auto lg:px-6 lg:pb-12">
+      <div className="px-4 mt-6 lg:mt-12 max-w-7xl mx-auto lg:px-6 lg:pb-2">
         <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-4 lg:p-8 text-center">
           <Leaf className="w-5 h-5 lg:w-7 lg:h-7 text-emerald-600 mx-auto" />
           <div className="text-[13px] lg:text-lg font-semibold text-emerald-900 mt-1 lg:mt-2">Grown with care, delivered fresh</div>
           <div className="text-[11.5px] lg:text-sm text-emerald-700 mt-0.5">No pesticides • No preservatives • No artificial colours</div>
         </div>
+      </div>
+
+      {/* Newsletter */}
+      <Newsletter />
+    </div>
+  );
+};
+
+const Newsletter = () => {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!email || !email.includes('@')) return;
+    setLoading(true);
+    try { await api.post('/newsletter', { email }); setDone(true); setEmail(''); }
+    catch (_) {}
+    finally { setLoading(false); }
+  };
+  return (
+    <div className="px-4 mt-6 lg:mt-10 max-w-7xl mx-auto lg:px-6 lg:pb-16">
+      <div className="rounded-2xl lg:rounded-3xl bg-neutral-900 text-white p-5 lg:p-10 grid lg:grid-cols-2 gap-6 items-center overflow-hidden relative">
+        <div>
+          <div className="text-[11px] uppercase tracking-wider font-semibold text-emerald-400">Newsletter</div>
+          <h3 className="text-xl lg:text-3xl font-extrabold mt-1 leading-snug">Get fresh-harvest updates & exclusive coupons</h3>
+          <p className="text-[12.5px] lg:text-sm text-neutral-300 mt-1.5">Join 500+ organic-lovers. Unsubscribe anytime.</p>
+        </div>
+        {done ? (
+          <div data-testid="newsletter-success" className="text-emerald-400 text-sm font-semibold animate-in fade-in duration-200">✓ Thank you for subscribing! Check your inbox for our weekly harvest letter.</div>
+        ) : (
+          <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2">
+            <input data-testid="newsletter-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="flex-1 h-12 px-4 rounded-full bg-neutral-800 border border-neutral-700 outline-none focus:border-emerald-500 text-sm text-white placeholder:text-neutral-500" />
+            <button data-testid="newsletter-submit" disabled={loading} type="submit" className="h-12 px-6 rounded-full bg-emerald-500 text-neutral-900 font-bold hover:bg-emerald-400 disabled:opacity-60 transition-colors">{loading ? 'Subscribing…' : 'Subscribe'}</button>
+          </form>
+        )}
+        <Leaf className="absolute -right-6 -bottom-6 w-32 h-32 lg:w-48 lg:h-48 text-emerald-500/10 -rotate-12" />
       </div>
     </div>
   );

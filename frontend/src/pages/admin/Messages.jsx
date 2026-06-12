@@ -117,14 +117,19 @@ const AdminMessages = () => {
                 </div>
               </div>
               <div ref={scrollerRef} className="flex-1 overflow-y-auto bg-neutral-50 px-3 py-3 space-y-2">
-                {loadingThread ? <div className="text-center text-xs text-neutral-500 py-6">Loading…</div> : msgs.map((m) => (
-                  <div key={m.id} className={`flex ${m.fromAdmin ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 ${m.fromAdmin ? 'bg-emerald-700 text-white rounded-br-md' : 'bg-white border border-neutral-200 text-neutral-800 rounded-bl-md'}`}>
-                      <div className="text-[13px] whitespace-pre-wrap break-words">{m.text}</div>
-                      <div className={`text-[10px] mt-0.5 ${m.fromAdmin ? 'text-emerald-100' : 'text-neutral-400'}`}>{formatTime(m.createdAt)}</div>
+                {loadingThread ? <div className="text-center text-xs text-neutral-500 py-6">Loading…</div> : msgs.map((m) => {
+                  const imgMatch = (m.text || '').match(/\[image\](.*?)\[\/image\]/s);
+                  const cleanText = (m.text || '').replace(/\[image\].*?\[\/image\]/s, '').trim();
+                  return (
+                    <div key={m.id} className={`flex ${m.fromAdmin ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-1 duration-200`}>
+                      <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 shadow-sm ${m.fromAdmin ? 'bg-emerald-700 text-white rounded-br-md' : 'bg-white border border-neutral-200 text-neutral-800 rounded-bl-md'}`}>
+                        {imgMatch && <img src={imgMatch[1]} alt="" className="rounded-xl mb-1 max-w-full max-h-60 object-cover" />}
+                        {cleanText && <div className="text-[13px] whitespace-pre-wrap break-words">{cleanText}</div>}
+                        <div className={`text-[10px] mt-0.5 ${m.fromAdmin ? 'text-emerald-100' : 'text-neutral-400'}`}>{formatTime(m.createdAt)}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <form onSubmit={send} className="flex items-center gap-2 px-3 py-3 border-t border-neutral-200">
                 <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a reply…" className="flex-1 h-11 px-4 rounded-full bg-neutral-100 outline-none text-sm border border-transparent focus:bg-white focus:border-emerald-400" />
