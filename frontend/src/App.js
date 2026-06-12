@@ -18,6 +18,7 @@ import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import Profile from './pages/Profile';
 import EditProfile from './pages/EditProfile';
+import Addresses from './pages/Addresses';
 import Search from './pages/Search';
 import Notifications from './pages/Notifications';
 import Messages from './pages/Messages';
@@ -31,6 +32,8 @@ import AdminCategoriesPage from './pages/admin/Categories';
 import AdminAnalytics from './pages/admin/Analytics';
 import AdminMessages from './pages/admin/Messages';
 import AdminSettings from './pages/admin/Settings';
+import AdminBanners from './pages/admin/Banners';
+import AdminCoupons from './pages/admin/Coupons';
 import { Toaster } from './components/ui/toaster';
 import { ADMIN_PATH } from './lib/admin-path';
 import { Leaf } from 'lucide-react';
@@ -73,6 +76,8 @@ const AppRoutes = () => {
           <Route path="orders" element={<AdminOrders />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="messages" element={<AdminMessages />} />
+          <Route path="banners" element={<AdminBanners />} />
+          <Route path="coupons" element={<AdminCoupons />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
       </Routes>
@@ -91,6 +96,7 @@ const AppRoutes = () => {
         <Route path="/order/:id" element={<Protected><OrderDetail /></Protected>} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/edit" element={<Protected><EditProfile /></Protected>} />
+        <Route path="/profile/addresses" element={<Protected><Addresses /></Protected>} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/search" element={<Search />} />

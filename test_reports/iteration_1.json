@@ -1,0 +1,43 @@
+{
+  "summary": "Backend: 19/19 pytest pass (100%) across Auth, Address Book CRUD, Site Settings, Banners, Coupons, Orders+Coupon. Frontend admin flow fully works (admin login at /portal-7x9k2m4p8q3z6n1v, Banners create, Coupons create, Settings tabs Payment/Site/Delivery). Customer signup works and Profile -> Addresses navigation works. However, the Add-Address modal is MISSING the documented data-testids and addr-save-btn, which blocks both the address-book add scenario and the entire downstream Checkout flow.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Addresses.jsx (New address modal)", "issue": "Missing data-testids on form inputs and save button. Form has plain placeholder-only inputs (Full name, mobile, House / Road / Building, Area / Thana / Upazila, District, Division, Postal code, Note for rider) and a Save Address button without testid. Documented testids addr-label / addr-fullName / addr-phone / addr-address / addr-area / addr-save-btn do not exist. addr-add-btn-empty IS present.", "selector": "[data-testid='addr-fullName'] etc.", "priority": "HIGH"},
+      {"component": "Login.jsx & Signup.jsx", "issue": "Form inputs lack data-testid; only placeholders identify them (Full name, Email, Mobile number, Password ...).", "selector": "n/a", "priority": "MEDIUM"},
+      {"component": "Product card / ProductDetail", "issue": "No discoverable 'Add to cart' button via testid or text. Searched all <button> elements on home and on /products/pure-cow-ghee — none with cart-related testid or 'Add to cart' text. Likely icon-only without aria/text/testid, blocking automated cart flows.", "selector": "[data-testid*='cart'] / button:has-text('Add to cart')", "priority": "HIGH"},
+      {"component": "Checkout.jsx", "issue": "Console error: 'Cannot update a component (BrowserRouter) while rendering a different component (Checkout)'. Indicates setState during render — should be wrapped in useEffect.", "selector": "n/a", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Customer checkout end-to-end", "issue": "Could not complete saved-address selection / coupon apply / COD confirm because (a) address could not be saved without addr-* testids and (b) Add-to-cart not reachable, so /checkout redirected to /cart (empty cart).", "affected_selectors": ["checkout-addr-{id}", "checkout-continue-payment", "checkout-coupon-input", "checkout-confirm-order-desktop"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_backend.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Add data-testids to AddAddress modal inputs (addr-label / addr-fullName / addr-phone / addr-address / addr-area / addr-city / addr-district / addr-division / addr-postalCode / addr-default-toggle) and save button (addr-save-btn) — as listed in the review request.",
+    "Add data-testid='product-add-to-cart' (and aria-label) to product card and product detail add-to-cart button so customer cart flow can be exercised by tests.",
+    "Fix Checkout setState-during-render warning (wrap navigate('/cart') redirect inside useEffect).",
+    "Add data-testids to Login / Signup form inputs and submit buttons for stable automation."
+  ],
+  "critical_code_review_comments": [
+    "server.py is 1090+ lines — split into routers/auth.py, routers/products.py, routers/orders.py, routers/admin.py for maintainability.",
+    "Backend signup gives token immediately and pushes a welcome notification — good. Coupon usedCount is correctly incremented atomically with $inc — verified.",
+    "Coupon apply route is protected by get_current_user — good, prevents anonymous coupon enumeration.",
+    "Address book stores addresses inside the user document. Default-promotion logic on delete works only if remaining list non-empty — verified. Auto-default on first address — verified.",
+    "Site settings PUT requires admin — verified. GET is public — correct.",
+    "Banner public list filters active=True and sorts by order — correct.",
+    "CORS allow_origins=['*'] with allow_credentials=True is technically inconsistent in many browsers; acceptable for demo but worth noting."
+  ],
+  "updated_files": ["/app/backend/tests/test_backend.py"],
+  "success_rate": {"backend": "100%", "frontend": "~55% (admin flows 100%, customer address+checkout blocked by missing testids)"},
+  "test_credentials": "Admin: admin@organicshop.com / admin123. Test customers created dynamically with email prefix TEST_/buyer_/test_.",
+  "seed_data_creation": "Created during tests: TEST_* users, one TEST UI Banner (deleted), TEST10X coupon (deleted), TESTxxxx coupons (deleted), one customer order with SOBUJ100 applied (kept). Site settings were updated then restored to defaults.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend API surface for Address Book, Site Settings, Banners, Coupons, and Order+Coupon is fully passing (19/19 in /app/backend/tests/test_backend.py). Admin UI at /portal-7x9k2m4p8q3z6n1v fully verified: banners CRUD, coupons CRUD, settings tabs. Pending UI verification once main agent adds missing data-testids: (a) address form save flow & default-badge display, (b) checkout saved-address selection cards, (c) coupon application discount reflection, (d) place COD order success screen. Use Pure Cow Ghee (৳1450) x1 to exceed ৳500 coupon threshold easily.",
+  "rca of the issue": "Address form modal in Addresses.jsx and product Add-to-cart button render without data-testid attributes, breaking automated testability. Inputs in the modal rely solely on placeholder strings; the save button uses text 'Save address'. Recommended fix: add data-testid='addr-label-Home/Office/Other', addr-fullName, addr-phone, addr-address, addr-area, addr-city, addr-district, addr-division, addr-postalCode, addr-note, addr-default-toggle, addr-save-btn on respective elements. For products, add data-testid='product-add-to-cart' to the Add-to-cart button in ProductCard and ProductDetail components."
+}

@@ -1,24 +1,44 @@
 import React, { useEffect, useState } from 'react';
-import { api, formatBDT } from '../../lib/api';
+import { api } from '../../lib/api';
 import { useToast } from '../../hooks/use-toast';
-import { Save, Smartphone, Wallet, Info } from 'lucide-react';
+import { Save, Smartphone, Wallet, Info, Globe, Truck, Building2, MessageCircle as MC } from 'lucide-react';
+
+const tabs = [
+  { key: 'payment', label: 'Payment', icon: Wallet },
+  { key: 'site', label: 'Site info', icon: Globe },
+  { key: 'delivery', label: 'Delivery', icon: Truck },
+];
 
 const AdminSettings = () => {
   const { toast } = useToast();
-  const [s, setS] = useState({ bkashNumber: '', nagadNumber: '', bkashType: 'personal', nagadType: 'personal', instructions: '' });
+  const [tab, setTab] = useState('payment');
+  const [p, setP] = useState({ bkashNumber: '', nagadNumber: '', bkashType: 'personal', nagadType: 'personal', instructions: '' });
+  const [s, setS] = useState({ siteName: '', tagline: '', contactPhone: '', contactEmail: '', contactAddress: '', facebookUrl: '', instagramUrl: '', whatsappNumber: '', deliveryFee: 60, freeDeliveryAbove: 500, aboutText: '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { (async () => {
-    try { const { data } = await api.get('/settings/payment'); setS({ ...s, ...data }); } finally { setLoading(false); }
+    try {
+      const [a, b] = await Promise.all([api.get('/settings/payment'), api.get('/settings/site')]);
+      setP({ ...p, ...a.data });
+      setS({ ...s, ...b.data });
+    } finally { setLoading(false); }
     // eslint-disable-next-line
   })(); }, []);
 
-  const save = async (e) => {
+  const savePayment = async (e) => {
     e.preventDefault();
-    if (!s.bkashNumber && !s.nagadNumber) { toast({ title: 'অন্তত একটি নাম্বার দিন', variant: 'destructive' }); return; }
+    if (!p.bkashNumber && !p.nagadNumber) { toast({ title: 'অন্তত একটি নাম্বার দিন', variant: 'destructive' }); return; }
     setSaving(true);
-    try { await api.put('/admin/settings/payment', s); toast({ title: 'Payment settings updated' }); }
+    try { await api.put('/admin/settings/payment', p); toast({ title: 'Payment settings updated' }); }
+    catch (e) { toast({ title: 'Save failed', description: e.response?.data?.detail || 'Try again', variant: 'destructive' }); }
+    finally { setSaving(false); }
+  };
+
+  const saveSite = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try { await api.put('/admin/settings/site', s); toast({ title: 'Site settings updated' }); }
     catch (e) { toast({ title: 'Save failed', description: e.response?.data?.detail || 'Try again', variant: 'destructive' }); }
     finally { setSaving(false); }
   };
@@ -28,66 +48,149 @@ const AdminSettings = () => {
   return (
     <div>
       <div className="mb-5">
-        <h1 className="text-xl md:text-2xl font-extrabold">Payment settings</h1>
-        <p className="text-sm text-neutral-500 mt-1">Configure your official bKash & Nagad numbers. These will be shown to customers on checkout.</p>
+        <h1 className="text-xl md:text-2xl font-extrabold">Settings</h1>
+        <p className="text-sm text-neutral-500 mt-1">Configure your storefront, payments and delivery.</p>
       </div>
-      <form onSubmit={save} className="max-w-2xl space-y-4">
-        <div className="rounded-2xl bg-white border border-neutral-100 p-4 md:p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-9 h-9 rounded-lg bg-pink-600 grid place-items-center"><Smartphone className="w-4 h-4 text-white" /></div>
-            <div>
-              <div className="font-extrabold text-sm">bKash</div>
-              <div className="text-[10.5px] text-neutral-500">Used when customer picks bKash</div>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="md:col-span-2">
-              <label className="text-[10.5px] uppercase tracking-wider font-semibold text-neutral-600">Number</label>
-              <input value={s.bkashNumber} onChange={(e) => setS({ ...s, bkashNumber: e.target.value })} placeholder="01XXXXXXXXX" className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm font-mono" />
-            </div>
-            <div>
-              <label className="text-[10.5px] uppercase tracking-wider font-semibold text-neutral-600">Account type</label>
-              <select value={s.bkashType} onChange={(e) => setS({ ...s, bkashType: e.target.value })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm">
-                <option value="personal">Personal</option>
-                <option value="merchant">Merchant</option>
-                <option value="agent">Agent</option>
-              </select>
-            </div>
-          </div>
-        </div>
 
-        <div className="rounded-2xl bg-white border border-neutral-100 p-4 md:p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-9 h-9 rounded-lg bg-orange-500 grid place-items-center"><Wallet className="w-4 h-4 text-white" /></div>
-            <div>
-              <div className="font-extrabold text-sm">Nagad</div>
-              <div className="text-[10.5px] text-neutral-500">Used when customer picks Nagad</div>
+      {/* Tabs */}
+      <div className="flex gap-1 bg-neutral-100 p-1 rounded-full w-full md:w-auto md:inline-flex mb-5 overflow-x-auto">
+        {tabs.map((t) => {
+          const active = tab === t.key;
+          return (
+            <button key={t.key} data-testid={`settings-tab-${t.key}`} onClick={() => setTab(t.key)} className={`shrink-0 inline-flex items-center gap-1.5 px-4 h-9 rounded-full text-[12.5px] font-semibold transition-all ${active ? 'bg-white text-neutral-900 shadow' : 'text-neutral-600 hover:text-neutral-900'}`}>
+              <t.icon className="w-3.5 h-3.5" /> {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === 'payment' && (
+        <form onSubmit={savePayment} className="max-w-2xl space-y-4">
+          <div className="rounded-2xl bg-white border border-neutral-100 p-4 md:p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-9 h-9 rounded-lg bg-pink-600 grid place-items-center"><Smartphone className="w-4 h-4 text-white" /></div>
+              <div>
+                <div className="font-extrabold text-sm">bKash</div>
+                <div className="text-[10.5px] text-neutral-500">Used when customer picks bKash</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="md:col-span-2">
+                <label className="text-[10.5px] uppercase tracking-wider font-semibold text-neutral-600">Number</label>
+                <input data-testid="settings-bkashNumber" value={p.bkashNumber} onChange={(e) => setP({ ...p, bkashNumber: e.target.value })} placeholder="01XXXXXXXXX" className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm font-mono" />
+              </div>
+              <div>
+                <label className="text-[10.5px] uppercase tracking-wider font-semibold text-neutral-600">Account type</label>
+                <select data-testid="settings-bkashType" value={p.bkashType} onChange={(e) => setP({ ...p, bkashType: e.target.value })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm">
+                  <option value="personal">Personal</option>
+                  <option value="merchant">Merchant</option>
+                  <option value="agent">Agent</option>
+                </select>
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="md:col-span-2">
-              <label className="text-[10.5px] uppercase tracking-wider font-semibold text-neutral-600">Number</label>
-              <input value={s.nagadNumber} onChange={(e) => setS({ ...s, nagadNumber: e.target.value })} placeholder="01XXXXXXXXX" className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm font-mono" />
+
+          <div className="rounded-2xl bg-white border border-neutral-100 p-4 md:p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-9 h-9 rounded-lg bg-orange-500 grid place-items-center"><Wallet className="w-4 h-4 text-white" /></div>
+              <div>
+                <div className="font-extrabold text-sm">Nagad</div>
+                <div className="text-[10.5px] text-neutral-500">Used when customer picks Nagad</div>
+              </div>
             </div>
-            <div>
-              <label className="text-[10.5px] uppercase tracking-wider font-semibold text-neutral-600">Account type</label>
-              <select value={s.nagadType} onChange={(e) => setS({ ...s, nagadType: e.target.value })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm">
-                <option value="personal">Personal</option>
-                <option value="merchant">Merchant</option>
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="md:col-span-2">
+                <label className="text-[10.5px] uppercase tracking-wider font-semibold text-neutral-600">Number</label>
+                <input data-testid="settings-nagadNumber" value={p.nagadNumber} onChange={(e) => setP({ ...p, nagadNumber: e.target.value })} placeholder="01XXXXXXXXX" className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm font-mono" />
+              </div>
+              <div>
+                <label className="text-[10.5px] uppercase tracking-wider font-semibold text-neutral-600">Account type</label>
+                <select data-testid="settings-nagadType" value={p.nagadType} onChange={(e) => setP({ ...p, nagadType: e.target.value })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm">
+                  <option value="personal">Personal</option>
+                  <option value="merchant">Merchant</option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="rounded-2xl bg-white border border-neutral-100 p-4 md:p-5">
-          <div className="flex items-center gap-2 mb-2"><Info className="w-4 h-4 text-emerald-700" /><div className="font-extrabold text-sm">Checkout instructions</div></div>
-          <textarea value={s.instructions} onChange={(e) => setS({ ...s, instructions: e.target.value })} rows={3} placeholder="Shown to customers on the payment screen." className="w-full p-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm resize-none" />
-        </div>
+          <div className="rounded-2xl bg-white border border-neutral-100 p-4 md:p-5">
+            <div className="flex items-center gap-2 mb-2"><Info className="w-4 h-4 text-emerald-700" /><div className="font-extrabold text-sm">Checkout instructions</div></div>
+            <textarea data-testid="settings-instructions" value={p.instructions} onChange={(e) => setP({ ...p, instructions: e.target.value })} rows={3} placeholder="Shown to customers on the payment screen." className="w-full p-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm resize-none" />
+          </div>
 
-        <button disabled={saving} type="submit" className="w-full md:w-auto px-6 h-12 rounded-full bg-emerald-700 text-white font-semibold hover:bg-emerald-800 disabled:opacity-60 inline-flex items-center justify-center gap-2">
-          <Save className="w-4 h-4" /> {saving ? 'Saving…' : 'Save changes'}
-        </button>
-      </form>
+          <button data-testid="settings-payment-save" disabled={saving} type="submit" className="w-full md:w-auto px-6 h-12 rounded-full bg-emerald-700 text-white font-semibold hover:bg-emerald-800 disabled:opacity-60 inline-flex items-center justify-center gap-2 transition-colors">
+            <Save className="w-4 h-4" /> {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </form>
+      )}
+
+      {tab === 'site' && (
+        <form onSubmit={saveSite} className="max-w-2xl space-y-4">
+          <div className="rounded-2xl bg-white border border-neutral-100 p-4 md:p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-9 h-9 rounded-lg bg-emerald-600 grid place-items-center"><Globe className="w-4 h-4 text-white" /></div>
+              <div className="font-extrabold text-sm">Brand</div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10.5px] uppercase tracking-wider font-semibold text-neutral-600">Site name</label>
+                <input data-testid="settings-siteName" value={s.siteName} onChange={(e) => setS({ ...s, siteName: e.target.value })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+              </div>
+              <div>
+                <label className="text-[10.5px] uppercase tracking-wider font-semibold text-neutral-600">Tagline</label>
+                <input data-testid="settings-tagline" value={s.tagline} onChange={(e) => setS({ ...s, tagline: e.target.value })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <label className="text-[10.5px] uppercase tracking-wider font-semibold text-neutral-600">About text</label>
+              <textarea data-testid="settings-aboutText" value={s.aboutText} onChange={(e) => setS({ ...s, aboutText: e.target.value })} rows={3} className="mt-1 w-full p-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm resize-none" />
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white border border-neutral-100 p-4 md:p-5">
+            <div className="flex items-center gap-2 mb-3"><Building2 className="w-4 h-4 text-emerald-700" /><div className="font-extrabold text-sm">Contact</div></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input data-testid="settings-contactPhone" value={s.contactPhone} onChange={(e) => setS({ ...s, contactPhone: e.target.value })} placeholder="Contact phone" className="h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+              <input data-testid="settings-contactEmail" value={s.contactEmail} onChange={(e) => setS({ ...s, contactEmail: e.target.value })} placeholder="Contact email" className="h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+              <input data-testid="settings-whatsapp" value={s.whatsappNumber} onChange={(e) => setS({ ...s, whatsappNumber: e.target.value })} placeholder="WhatsApp number" className="h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+              <input data-testid="settings-contactAddress" value={s.contactAddress} onChange={(e) => setS({ ...s, contactAddress: e.target.value })} placeholder="Address" className="h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+              <input data-testid="settings-facebookUrl" value={s.facebookUrl} onChange={(e) => setS({ ...s, facebookUrl: e.target.value })} placeholder="Facebook URL" className="h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+              <input data-testid="settings-instagramUrl" value={s.instagramUrl} onChange={(e) => setS({ ...s, instagramUrl: e.target.value })} placeholder="Instagram URL" className="h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+            </div>
+          </div>
+
+          <button data-testid="settings-site-save" disabled={saving} type="submit" className="w-full md:w-auto px-6 h-12 rounded-full bg-emerald-700 text-white font-semibold hover:bg-emerald-800 disabled:opacity-60 inline-flex items-center justify-center gap-2 transition-colors">
+            <Save className="w-4 h-4" /> {saving ? 'Saving…' : 'Save site settings'}
+          </button>
+        </form>
+      )}
+
+      {tab === 'delivery' && (
+        <form onSubmit={saveSite} className="max-w-2xl space-y-4">
+          <div className="rounded-2xl bg-white border border-neutral-100 p-4 md:p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-9 h-9 rounded-lg bg-blue-600 grid place-items-center"><Truck className="w-4 h-4 text-white" /></div>
+              <div>
+                <div className="font-extrabold text-sm">Delivery rules</div>
+                <div className="text-[10.5px] text-neutral-500">These control the storefront cart calculations.</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10.5px] uppercase tracking-wider font-semibold text-neutral-600">Delivery fee (৳)</label>
+                <input data-testid="settings-deliveryFee" type="number" value={s.deliveryFee} onChange={(e) => setS({ ...s, deliveryFee: parseFloat(e.target.value) || 0 })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+              </div>
+              <div>
+                <label className="text-[10.5px] uppercase tracking-wider font-semibold text-neutral-600">Free delivery above (৳)</label>
+                <input data-testid="settings-freeDeliveryAbove" type="number" value={s.freeDeliveryAbove} onChange={(e) => setS({ ...s, freeDeliveryAbove: parseFloat(e.target.value) || 0 })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+              </div>
+            </div>
+          </div>
+          <button data-testid="settings-delivery-save" disabled={saving} type="submit" className="w-full md:w-auto px-6 h-12 rounded-full bg-emerald-700 text-white font-semibold hover:bg-emerald-800 disabled:opacity-60 inline-flex items-center justify-center gap-2 transition-colors">
+            <Save className="w-4 h-4" /> {saving ? 'Saving…' : 'Save delivery rules'}
+          </button>
+        </form>
+      )}
     </div>
   );
 };

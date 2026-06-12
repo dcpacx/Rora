@@ -109,12 +109,44 @@ class OrderItem(BaseModel):
     unit: Optional[str] = None
 
 class Address(BaseModel):
+    id: Optional[str] = None
+    label: Optional[str] = 'Home'           # Home / Office / Other
+    fullName: str
+    phone: str
+    address: str                            # House / Road / Building
+    area: str                               # Area / Thana / Upazila
+    city: str = 'Dhaka'
+    district: Optional[str] = None
+    division: Optional[str] = None
+    postalCode: Optional[str] = None
+    note: Optional[str] = None
+    isDefault: Optional[bool] = False
+
+class AddressCreate(BaseModel):
+    label: Optional[str] = 'Home'
     fullName: str
     phone: str
     address: str
     area: str
     city: str = 'Dhaka'
+    district: Optional[str] = None
+    division: Optional[str] = None
+    postalCode: Optional[str] = None
     note: Optional[str] = None
+    isDefault: Optional[bool] = False
+
+class AddressUpdate(BaseModel):
+    label: Optional[str] = None
+    fullName: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    area: Optional[str] = None
+    city: Optional[str] = None
+    district: Optional[str] = None
+    division: Optional[str] = None
+    postalCode: Optional[str] = None
+    note: Optional[str] = None
+    isDefault: Optional[bool] = None
 
 class OrderCreate(BaseModel):
     items: List[OrderItem]
@@ -125,6 +157,8 @@ class OrderCreate(BaseModel):
     subtotal: float
     delivery: float
     total: float
+    couponCode: Optional[str] = None
+    discount: Optional[float] = 0
 
 class OrderStatusUpdate(BaseModel):
     status: Literal['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
@@ -165,6 +199,46 @@ class PaymentInitiate(BaseModel):
 class PaymentVerify(BaseModel):
     sessionId: str
     otp: str
+
+
+class SiteSettings(BaseModel):
+    siteName: Optional[str] = 'প্রকৃতির ঘ্রাণ'
+    tagline: Optional[str] = 'Farm-fresh organic goodness'
+    contactPhone: Optional[str] = ''
+    contactEmail: Optional[str] = ''
+    contactAddress: Optional[str] = ''
+    facebookUrl: Optional[str] = ''
+    instagramUrl: Optional[str] = ''
+    whatsappNumber: Optional[str] = ''
+    deliveryFee: Optional[float] = 60
+    freeDeliveryAbove: Optional[float] = 500
+    aboutText: Optional[str] = ''
+
+
+class BannerUpsert(BaseModel):
+    title: str
+    subtitle: Optional[str] = ''
+    image: Optional[str] = ''
+    ctaLabel: Optional[str] = 'Shop now'
+    ctaLink: Optional[str] = '/categories'
+    active: bool = True
+    order: int = 0
+
+
+class CouponUpsert(BaseModel):
+    code: str
+    type: Literal['flat', 'percent'] = 'flat'
+    value: float
+    minOrder: Optional[float] = 0
+    maxDiscount: Optional[float] = None
+    active: bool = True
+    usageLimit: Optional[int] = None
+    expiresAt: Optional[str] = None  # ISO date string
+
+
+class CouponApply(BaseModel):
+    code: str
+    subtotal: float
 
 
 # ------------ Helpers ------------
@@ -267,6 +341,54 @@ async def update_me(body: UserUpdate, user = Depends(get_current_user)):
         await db.users.update_one({'id': user['id']}, {'$set': update})
     u = await db.users.find_one({'id': user['id']})
     return {'id': u['id'], 'name': u['name'], 'email': u['email'], 'phone': u['phone'], 'role': u.get('role', 'customer'), 'avatar': u.get('avatar')}
+
+
+# Addresses (per-user address book)
+@api.get('/auth/me/addresses')
+async def list_addresses(user = Depends(get_current_user)):
+    u = await db.users.find_one({'id': user['id']})
+    return u.get('addresses', []) or []
+
+@api.post('/auth/me/addresses')
+async def add_address(body: AddressCreate, user = Depends(get_current_user)):
+    new_addr = body.model_dump()
+    new_addr['id'] = str(uuid.uuid4())
+    u = await db.users.find_one({'id': user['id']})
+    existing = u.get('addresses', []) or []
+    # if marked default OR first address — make default & clear other defaults
+    if new_addr.get('isDefault') or len(existing) == 0:
+        for a in existing: a['isDefault'] = False
+        new_addr['isDefault'] = True
+    existing.append(new_addr)
+    await db.users.update_one({'id': user['id']}, {'$set': {'addresses': existing}})
+    return new_addr
+
+@api.put('/auth/me/addresses/{addr_id}')
+async def update_address(addr_id: str, body: AddressUpdate, user = Depends(get_current_user)):
+    u = await db.users.find_one({'id': user['id']})
+    existing = u.get('addresses', []) or []
+    target = next((a for a in existing if a.get('id') == addr_id), None)
+    if not target: raise HTTPException(404, 'Address not found')
+    update = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    target.update(update)
+    if update.get('isDefault'):
+        for a in existing:
+            if a.get('id') != addr_id: a['isDefault'] = False
+    await db.users.update_one({'id': user['id']}, {'$set': {'addresses': existing}})
+    return target
+
+@api.delete('/auth/me/addresses/{addr_id}')
+async def delete_address(addr_id: str, user = Depends(get_current_user)):
+    u = await db.users.find_one({'id': user['id']})
+    existing = u.get('addresses', []) or []
+    target = next((a for a in existing if a.get('id') == addr_id), None)
+    if not target: raise HTTPException(404, 'Address not found')
+    was_default = target.get('isDefault')
+    existing = [a for a in existing if a.get('id') != addr_id]
+    # promote first remaining as default if needed
+    if was_default and existing: existing[0]['isDefault'] = True
+    await db.users.update_one({'id': user['id']}, {'$set': {'addresses': existing}})
+    return {'ok': True}
 
 
 # Messages (chat between customer & admin)
@@ -377,6 +499,120 @@ async def update_payment_settings(body: PaymentSettings, admin = Depends(get_adm
     data = body.model_dump()
     await db.settings.update_one({'key': 'payment'}, {'$set': {**data, 'key': 'payment'}}, upsert=True)
     return data
+
+
+# Site Settings (public read, admin write)
+SITE_DEFAULTS = {
+    'siteName': 'প্রকৃতির ঘ্রাণ',
+    'tagline': 'Farm-fresh organic goodness',
+    'contactPhone': '', 'contactEmail': '', 'contactAddress': '',
+    'facebookUrl': '', 'instagramUrl': '', 'whatsappNumber': '',
+    'deliveryFee': 60, 'freeDeliveryAbove': 500, 'aboutText': '',
+}
+
+@api.get('/settings/site')
+async def get_site_settings():
+    s = await db.settings.find_one({'key': 'site'})
+    if not s: return SITE_DEFAULTS
+    s.pop('_id', None); s.pop('key', None)
+    return {**SITE_DEFAULTS, **s}
+
+@api.put('/admin/settings/site')
+async def update_site_settings(body: SiteSettings, admin = Depends(get_admin)):
+    data = body.model_dump()
+    await db.settings.update_one({'key': 'site'}, {'$set': {**data, 'key': 'site'}}, upsert=True)
+    return data
+
+
+# Banners (public read, admin CRUD)
+@api.get('/banners')
+async def list_banners():
+    items = await db.banners.find({'active': True}).sort('order', 1).to_list(50)
+    for b in items: b.pop('_id', None)
+    return items
+
+@api.get('/admin/banners')
+async def admin_list_banners(admin = Depends(get_admin)):
+    items = await db.banners.find().sort('order', 1).to_list(100)
+    for b in items: b.pop('_id', None)
+    return items
+
+@api.post('/admin/banners')
+async def admin_create_banner(body: BannerUpsert, admin = Depends(get_admin)):
+    banner = {'id': str(uuid.uuid4()), **body.model_dump(), 'createdAt': datetime.utcnow().isoformat()}
+    await db.banners.insert_one(banner); banner.pop('_id', None)
+    return banner
+
+@api.put('/admin/banners/{banner_id}')
+async def admin_update_banner(banner_id: str, body: BannerUpsert, admin = Depends(get_admin)):
+    res = await db.banners.update_one({'id': banner_id}, {'$set': body.model_dump()})
+    if res.matched_count == 0: raise HTTPException(404, 'Banner not found')
+    b = await db.banners.find_one({'id': banner_id}); b.pop('_id', None)
+    return b
+
+@api.delete('/admin/banners/{banner_id}')
+async def admin_delete_banner(banner_id: str, admin = Depends(get_admin)):
+    res = await db.banners.delete_one({'id': banner_id})
+    if res.deleted_count == 0: raise HTTPException(404, 'Banner not found')
+    return {'ok': True}
+
+
+# Coupons
+def _calc_discount(coupon: dict, subtotal: float) -> float:
+    if coupon['type'] == 'flat':
+        return min(coupon['value'], subtotal)
+    pct = subtotal * (coupon['value'] / 100.0)
+    if coupon.get('maxDiscount'):
+        pct = min(pct, coupon['maxDiscount'])
+    return round(pct, 2)
+
+@api.post('/coupons/apply')
+async def apply_coupon(body: CouponApply, user = Depends(get_current_user)):
+    code = body.code.strip().upper()
+    c = await db.coupons.find_one({'code': code})
+    if not c: raise HTTPException(404, 'Invalid coupon code')
+    if not c.get('active', True): raise HTTPException(400, 'Coupon inactive')
+    if c.get('expiresAt'):
+        try:
+            if datetime.fromisoformat(c['expiresAt']) < datetime.utcnow():
+                raise HTTPException(400, 'Coupon expired')
+        except ValueError:
+            pass
+    if c.get('usageLimit') and c.get('usedCount', 0) >= c['usageLimit']:
+        raise HTTPException(400, 'Coupon usage limit reached')
+    if body.subtotal < (c.get('minOrder') or 0):
+        raise HTTPException(400, f"Minimum order ৳{c.get('minOrder')} required")
+    discount = _calc_discount(c, body.subtotal)
+    return {'code': c['code'], 'type': c['type'], 'value': c['value'], 'discount': discount}
+
+@api.get('/admin/coupons')
+async def admin_list_coupons(admin = Depends(get_admin)):
+    items = await db.coupons.find().sort('createdAt', -1).to_list(200)
+    for c in items: c.pop('_id', None)
+    return items
+
+@api.post('/admin/coupons')
+async def admin_create_coupon(body: CouponUpsert, admin = Depends(get_admin)):
+    code = body.code.strip().upper()
+    if await db.coupons.find_one({'code': code}):
+        raise HTTPException(400, 'Coupon code already exists')
+    c = {'id': str(uuid.uuid4()), **body.model_dump(), 'code': code, 'usedCount': 0, 'createdAt': datetime.utcnow().isoformat()}
+    await db.coupons.insert_one(c); c.pop('_id', None)
+    return c
+
+@api.put('/admin/coupons/{coupon_id}')
+async def admin_update_coupon(coupon_id: str, body: CouponUpsert, admin = Depends(get_admin)):
+    data = body.model_dump(); data['code'] = data['code'].strip().upper()
+    res = await db.coupons.update_one({'id': coupon_id}, {'$set': data})
+    if res.matched_count == 0: raise HTTPException(404, 'Coupon not found')
+    c = await db.coupons.find_one({'id': coupon_id}); c.pop('_id', None)
+    return c
+
+@api.delete('/admin/coupons/{coupon_id}')
+async def admin_delete_coupon(coupon_id: str, admin = Depends(get_admin)):
+    res = await db.coupons.delete_one({'id': coupon_id})
+    if res.deleted_count == 0: raise HTTPException(404, 'Coupon not found')
+    return {'ok': True}
 
 
 # Admin: verify or reject a manual bKash/Nagad payment
@@ -541,6 +777,8 @@ async def create_order(body: OrderCreate, user = Depends(get_current_user)):
         'paymentNote': None,
         'subtotal': body.subtotal,
         'delivery': body.delivery,
+        'discount': body.discount or 0,
+        'couponCode': body.couponCode,
         'total': body.total,
         # COD: pending order, unpaid (collect cash on delivery)
         # bKash/Nagad: pending order, pending payment verification by admin
@@ -549,6 +787,9 @@ async def create_order(body: OrderCreate, user = Depends(get_current_user)):
         'createdAt': datetime.utcnow().isoformat(),
     }
     await db.orders.insert_one(order)
+    # increment coupon usedCount if applied
+    if body.couponCode:
+        await db.coupons.update_one({'code': body.couponCode.strip().upper()}, {'$inc': {'usedCount': 1}})
     if body.paymentMethod == 'cod':
         msg = f"আপনার অর্ডার ৳{order['total']:.0f} গ্রহণ করা হয়েছে। ডেলিভারির সময় ক্যাশ পেমেন্ট করুন।"
     else:
@@ -807,6 +1048,30 @@ async def seed():
             'instructions': 'অনুগ্রহ করে উপরের নম্বরে সঠিক পরিমাণ Send Money করুন এবং সফল হলে ট্রানজেকশন আইডি (TrxID) লিখুন। আমরা ১৫–৩০ মিনিটে যাচাই করে কনফার্ম করব।',
         })
         logging.info('Seeded payment settings')
+
+    # Seed default site settings
+    if not await db.settings.find_one({'key': 'site'}):
+        await db.settings.insert_one({'key': 'site', **SITE_DEFAULTS})
+        logging.info('Seeded site settings')
+
+    # Seed default banners
+    if await db.banners.count_documents({}) == 0:
+        defaults = [
+            {'id': str(uuid.uuid4()), 'title': 'Farm-fresh organic goodness', 'subtitle': 'Free delivery on orders over ৳500',
+             'image': '', 'ctaLabel': 'Shop now', 'ctaLink': '/categories', 'active': True, 'order': 0,
+             'createdAt': datetime.utcnow().isoformat()},
+        ]
+        await db.banners.insert_many(defaults)
+        logging.info('Seeded banners')
+
+    # Seed welcome coupon
+    if await db.coupons.count_documents({}) == 0:
+        await db.coupons.insert_one({
+            'id': str(uuid.uuid4()), 'code': 'SOBUJ100', 'type': 'flat', 'value': 100,
+            'minOrder': 500, 'maxDiscount': None, 'active': True, 'usageLimit': None,
+            'expiresAt': None, 'usedCount': 0, 'createdAt': datetime.utcnow().isoformat(),
+        })
+        logging.info('Seeded welcome coupon SOBUJ100')
 
 
 app.include_router(api)

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { api } from '../lib/api';
 
 const CartContext = createContext(null);
 
@@ -6,7 +7,16 @@ const load = (k, fb) => { try { return JSON.parse(localStorage.getItem(k)) ?? fb
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(() => load('os_cart', []));
+  const [rules, setRules] = useState({ deliveryFee: 60, freeDeliveryAbove: 500 });
   useEffect(() => { localStorage.setItem('os_cart', JSON.stringify(cart)); }, [cart]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get('/settings/site');
+        setRules({ deliveryFee: data.deliveryFee ?? 60, freeDeliveryAbove: data.freeDeliveryAbove ?? 500 });
+      } catch (_) {}
+    })();
+  }, []);
 
   const addToCart = (product, qty = 1) => {
     setCart((prev) => {
@@ -21,7 +31,7 @@ export const CartProvider = ({ children }) => {
 
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart]);
   const subtotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.qty, 0), [cart]);
-  const delivery = useMemo(() => (subtotal > 0 && subtotal < 500 ? 60 : 0), [subtotal]);
+  const delivery = useMemo(() => (subtotal > 0 && subtotal < rules.freeDeliveryAbove ? rules.deliveryFee : 0), [subtotal, rules]);
   const total = subtotal + delivery;
 
   return (

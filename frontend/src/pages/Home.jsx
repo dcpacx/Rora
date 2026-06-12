@@ -24,23 +24,28 @@ const Home = () => {
   const [cats, setCats] = useState([]);
   const [featured, setFeatured] = useState([]);
   const [all, setAll] = useState([]);
+  const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const nav = useNavigate();
 
   useEffect(() => {
     (async () => {
       try {
-        const [c, f, a] = await Promise.all([
+        const [c, f, a, b] = await Promise.all([
           api.get('/categories'),
           api.get('/products', { params: { featured: true } }),
           api.get('/products'),
+          api.get('/banners'),
         ]);
         setCats(c.data);
         setFeatured(f.data);
         setAll(a.data);
+        setBanners(b.data || []);
       } finally { setLoading(false); }
     })();
   }, []);
+
+  const hero = banners[0];
 
   return (
     <div className="pb-4">
@@ -49,14 +54,15 @@ const Home = () => {
       {/* Promo banner */}
       <div className="px-4 mt-3 max-w-7xl mx-auto lg:px-6 lg:mt-6">
         <div className="relative rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-500 text-white p-5 lg:p-12 overflow-hidden">
+          {hero?.image && <img src={hero.image} alt="" className="absolute inset-0 w-full h-full object-cover opacity-25" />}
           <div className="relative z-10 max-w-xl">
             <div className="inline-flex items-center gap-1 bg-white/15 text-[10.5px] lg:text-xs font-semibold px-2 py-0.5 rounded-full">
               <Sparkles className="w-3 h-3" /> This week's harvest
             </div>
-            <h2 className="text-2xl lg:text-5xl font-extrabold mt-2 leading-tight">Farm-fresh<br />organic goodness</h2>
-            <p className="text-[12.5px] lg:text-base opacity-90 mt-1 lg:mt-3">Free delivery on orders over ৳500</p>
-            <button onClick={() => nav('/categories')} className="mt-3 lg:mt-5 inline-flex items-center gap-1.5 bg-white text-emerald-700 text-[12.5px] lg:text-sm font-semibold px-3.5 lg:px-5 h-9 lg:h-11 rounded-full hover:bg-emerald-50 transition-colors">
-              Shop now <ArrowRight className="w-3.5 h-3.5" />
+            <h2 className="text-2xl lg:text-5xl font-extrabold mt-2 leading-tight whitespace-pre-line">{hero?.title || 'Farm-fresh\norganic goodness'}</h2>
+            <p className="text-[12.5px] lg:text-base opacity-90 mt-1 lg:mt-3">{hero?.subtitle || 'Free delivery on orders over ৳500'}</p>
+            <button data-testid="home-shop-now-btn" onClick={() => nav(hero?.ctaLink || '/categories')} className="mt-3 lg:mt-5 inline-flex items-center gap-1.5 bg-white text-emerald-700 text-[12.5px] lg:text-sm font-semibold px-3.5 lg:px-5 h-9 lg:h-11 rounded-full hover:bg-emerald-50 transition-colors hover:scale-105 active:scale-95 transition-transform">
+              {hero?.ctaLabel || 'Shop now'} <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
           <Leaf className="absolute -right-4 -bottom-4 w-32 h-32 lg:w-64 lg:h-64 text-white/15 -rotate-12" />
