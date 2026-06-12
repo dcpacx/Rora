@@ -108,7 +108,7 @@ const Checkout = () => {
   }
 
   return (
-    <div className="pb-28">
+    <div className="pb-28 lg:pb-12 max-w-2xl mx-auto lg:px-6">
       <MobileHeader title="Checkout" back hideSearch />
 
       {step === 'details' && (
@@ -148,7 +148,12 @@ const Checkout = () => {
           </div>
           <div className="text-[11px] text-neutral-500 flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Secure checkout • your data is encrypted.</div>
 
-          <div className="absolute bottom-16 inset-x-0 bg-white border-t border-neutral-100 px-4 py-3">
+          <div className="lg:hidden fixed bottom-16 inset-x-0 bg-white border-t border-neutral-100 px-4 py-3 z-30">
+            <button disabled={loading} onClick={initiatePayment} className="w-full h-12 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-60">
+              {loading ? 'Processing…' : (method === 'cod' ? `Place order · ৳${formatBDT(total)}` : `Pay with ${method === 'bkash' ? 'bKash' : 'Nagad'} · ৳${formatBDT(total)}`)}
+            </button>
+          </div>
+          <div className="hidden lg:block mt-4">
             <button disabled={loading} onClick={initiatePayment} className="w-full h-12 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-60">
               {loading ? 'Processing…' : (method === 'cod' ? `Place order · ৳${formatBDT(total)}` : `Pay with ${method === 'bkash' ? 'bKash' : 'Nagad'} · ৳${formatBDT(total)}`)}
             </button>

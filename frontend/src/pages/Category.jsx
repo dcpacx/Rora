@@ -23,8 +23,11 @@ const CategoryPage = () => {
   return (
     <div className="pb-4">
       <MobileHeader title={cat?.name || 'Category'} back />
-      <div className="px-4 mt-3">
-        <div className="text-[12px] text-neutral-500 mb-3">{items.length} products • all organic, hand-picked.</div>
+      <div className="px-4 mt-3 max-w-7xl mx-auto lg:px-6 lg:mt-6">
+        <div className="hidden lg:block mb-4">
+          <h1 className="text-3xl font-extrabold">{cat?.name}</h1>
+        </div>
+        <div className="text-[12px] lg:text-sm text-neutral-500 mb-3">{items.length} products • all organic, hand-picked.</div>
         {loading ? (
           <div className="py-10 text-center text-neutral-500 text-sm">Loading…</div>
         ) : items.length === 0 ? (
@@ -34,7 +37,7 @@ const CategoryPage = () => {
             <div className="text-xs text-neutral-500 mt-1">New arrivals are on the way — check back soon.</div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
             {items.map((p) => (<ProductCard key={p.id} product={p} />))}
           </div>
         )}

@@ -165,6 +165,36 @@ backend:
         agent: "testing"
         comment: "✓ PASS - All order endpoints working correctly. Tested: (13) POST /orders with bkash returns status=confirmed, paymentStatus=paid, orderNo present, (14) POST /orders with COD returns status=pending, paymentStatus=unpaid, (15) GET /orders/my returns customer's orders, (16) GET /orders/{id} returns order for owner, different customer gets 403, (17) GET /admin/orders lists all orders for admin, (18) PATCH /admin/orders/{id} updates status to 'shipped' for admin, non-admin gets 403, (19) GET /admin/stats returns products/orders/customers/revenue counts."
 
+  - task: "Admin user management endpoints"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/admin/users returns customers with orderCount and totalSpent. GET /api/admin/users/{user_id} returns user detail with orders array."
+      - working: true
+        agent: "testing"
+        comment: "✓ PASS - Admin user management endpoints working correctly. Tested: (1) Admin login successful, (2) GET /admin/users returns 3 customers with orderCount and totalSpent numeric fields, (3) GET /admin/users without auth correctly returns 401, (4) GET /admin/users with customer token correctly returns 403, (5) GET /admin/users/{user_id} returns {user, orders} structure with order list."
+
+  - task: "Product tags functionality"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Products support tags field in ProductCreate and ProductUpdate models. POST /api/products accepts tags array, PUT /api/products/{id} can update tags, GET /api/products/{slug} returns tags field."
+      - working: true
+        agent: "testing"
+        comment: "✓ PASS - Product tags functionality working correctly. Tested: (6) POST /products with tags=['best-seller', 'raw'] returns product with tags array, (7) PUT /products/{id} with tags=['premium'] correctly replaces tags, (8) GET /products/{slug} returns tags field in response, (9) DELETE /products/{id} cleanup successful."
+
 frontend:
   - task: "Mobile-first storefront with bottom nav"
     implemented: true
@@ -181,7 +211,7 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: false
 
 test_plan:
@@ -195,3 +225,7 @@ agent_communication:
     message: "Backend rebuilt for organic shop. Auth uses JWT (admin seeded: admin@organicshop.com / admin123). Payments are simulated — initiate returns demo OTP 1234, verify returns a txnId. Please test full happy-path: signup -> login -> list products -> simulate payment initiate+verify -> create order -> list my orders -> admin list/update order status -> admin product create/update/delete."
   - agent: "testing"
     message: "✅ BACKEND TESTING COMPLETE - All 19 test steps passed successfully. Comprehensive testing completed covering: (1) Auth signup/login/me with JWT validation, (2) Admin login with role verification, (3) Categories listing (8 categories), (4) Products listing with filters (category, featured, search), (5) Product CRUD with admin protection, (6) Payment initiation and OTP verification (correct/incorrect), (7) Order creation with bkash (confirmed/paid) and COD (pending/unpaid), (8) Order listing and access control, (9) Admin order management and stats. No critical issues found. All endpoints returning correct status codes and data. Backend is production-ready."
+  - agent: "main"
+    message: "Added new admin user management endpoints (GET /api/admin/users, GET /api/admin/users/{user_id}) and product tags functionality. Please run regression tests to verify these new features work correctly with existing functionality."
+  - agent: "testing"
+    message: "✅ REGRESSION TESTING COMPLETE - All 9 regression tests passed successfully for newly added features. Tested: (1) Admin login with credentials admin@organicshop.com/admin123, (2) GET /admin/users returns customers with orderCount and totalSpent numeric fields (found 3 customers), (3) GET /admin/users without auth correctly returns 401, (4) GET /admin/users with customer token correctly returns 403, (5) GET /admin/users/{user_id} returns {user, orders} structure, (6) POST /products with tags=['best-seller', 'raw'] creates product with tags array, (7) PUT /products/{id} with tags=['premium'] correctly replaces tags, (8) GET /products/{slug} returns tags field, (9) DELETE /products/{id} cleanup successful. All new endpoints working correctly with proper authentication and authorization."

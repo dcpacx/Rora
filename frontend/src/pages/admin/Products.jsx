@@ -3,13 +3,23 @@ import { api, formatBDT } from '../../lib/api';
 import { Plus, Pencil, Trash2, X, Upload, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 
-const empty = { name: '', description: '', price: '', oldPrice: '', image: '', category: '', unit: '1 kg', stock: 100, organic: true, featured: false };
+const empty = { name: '', description: '', price: '', oldPrice: '', image: '', category: '', unit: '1 kg', stock: 100, organic: true, featured: false, tags: [] };
 
 const ProductForm = ({ initial, categories, onClose, onSaved }) => {
   const { toast } = useToast();
-  const [f, setF] = useState({ ...empty, ...(initial || {}), price: initial?.price?.toString() || '', oldPrice: initial?.oldPrice?.toString() || '' });
+  const [f, setF] = useState({ ...empty, ...(initial || {}), tags: initial?.tags || [], price: initial?.price?.toString() || '', oldPrice: initial?.oldPrice?.toString() || '' });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+
+  const addTag = () => {
+    const t = tagInput.trim().replace(/\s+/g, '-').toLowerCase();
+    if (!t) return;
+    if (f.tags.includes(t)) { setTagInput(''); return; }
+    setF({ ...f, tags: [...f.tags, t] });
+    setTagInput('');
+  };
+  const removeTag = (t) => setF({ ...f, tags: f.tags.filter((x) => x !== t) });
 
   const onFile = async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -25,7 +35,7 @@ const ProductForm = ({ initial, categories, onClose, onSaved }) => {
     if (!f.name || !f.price || !f.image || !f.category) { toast({ title: 'Fill all required fields', variant: 'destructive' }); return; }
     setSaving(true);
     try {
-      const payload = { name: f.name, description: f.description, price: parseFloat(f.price), oldPrice: f.oldPrice ? parseFloat(f.oldPrice) : null, image: f.image, category: f.category, unit: f.unit, stock: parseInt(f.stock) || 0, organic: f.organic, featured: f.featured };
+      const payload = { name: f.name, description: f.description, price: parseFloat(f.price), oldPrice: f.oldPrice ? parseFloat(f.oldPrice) : null, image: f.image, category: f.category, unit: f.unit, stock: parseInt(f.stock) || 0, organic: f.organic, featured: f.featured, tags: f.tags };
       if (initial?.id) { await api.put(`/products/${initial.id}`, payload); toast({ title: 'Product updated' }); }
       else { await api.post('/products', payload); toast({ title: 'Product created' }); }
       onSaved();
@@ -93,6 +103,20 @@ const ProductForm = ({ initial, categories, onClose, onSaved }) => {
               <input type="number" value={f.stock} onChange={(e) => setF({ ...f, stock: e.target.value })} className="mt-1 w-full h-11 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
             </div>
           </div>
+          <div>
+            <label className="text-[11px] font-semibold text-neutral-700 uppercase">Tags</label>
+            <div className="mt-1 flex items-center gap-2">
+              <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }} placeholder="best-seller, raw, gluten-free…" className="flex-1 h-10 px-3 rounded-xl bg-neutral-50 border border-neutral-200 outline-none focus:border-emerald-500 text-sm" />
+              <button type="button" onClick={addTag} className="h-10 px-4 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold hover:bg-emerald-100">Add tag</button>
+            </div>
+            {f.tags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {f.tags.map((t) => (
+                  <span key={t} className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs font-medium px-2.5 py-1 rounded-full">#{t}<button type="button" onClick={() => removeTag(t)} className="text-emerald-600 hover:text-red-600 ml-0.5">×</button></span>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-5">
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.organic} onChange={(e) => setF({ ...f, organic: e.target.checked })} className="w-4 h-4 accent-emerald-600" /> Certified organic</label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.featured} onChange={(e) => setF({ ...f, featured: e.target.checked })} className="w-4 h-4 accent-emerald-600" /> Featured on home</label>
@@ -155,6 +179,12 @@ const AdminProducts = () => {
                       <div>
                         <div className="font-semibold text-[13px] line-clamp-1 max-w-[260px]">{p.name}</div>
                         <div className="text-[10.5px] text-neutral-500">{p.unit} {p.featured && <span className="ml-1 text-emerald-700">• Featured</span>}</div>
+                        {p.tags && p.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {p.tags.slice(0, 3).map((t) => (<span key={t} className="text-[9.5px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">#{t}</span>))}
+                            {p.tags.length > 3 && <span className="text-[9.5px] text-neutral-500">+{p.tags.length - 3}</span>}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>

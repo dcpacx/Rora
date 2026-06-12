@@ -15,8 +15,8 @@ const BottomNav = () => {
   const { pathname } = useLocation();
   const { cartCount } = useCart();
   return (
-    <nav className="absolute bottom-0 inset-x-0 bg-white border-t border-neutral-200 z-40">
-      <div className="grid grid-cols-5 h-16">
+    <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t border-neutral-200 z-40">
+      <div className="grid grid-cols-5 h-16 max-w-md mx-auto">
         {items.map((it) => {
           const active = pathname === it.to || (it.to !== '/' && pathname.startsWith(it.to));
           return (
@@ -24,7 +24,7 @@ const BottomNav = () => {
               <it.icon className={`w-5 h-5 ${active ? 'text-emerald-600' : 'text-neutral-500'}`} />
               <span className={`text-[10.5px] font-medium ${active ? 'text-emerald-600' : 'text-neutral-500'}`}>{it.label}</span>
               {it.badge && cartCount > 0 && (
-                <span className="absolute top-1.5 right-[26%] bg-red-500 text-white text-[9px] font-semibold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">{cartCount}</span>
+                <span className="absolute top-1.5 right-[24%] bg-red-500 text-white text-[9px] font-semibold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">{cartCount}</span>
               )}
               {active && <span className="absolute top-0 w-8 h-0.5 bg-emerald-600 rounded-b-full" />}
             </Link>

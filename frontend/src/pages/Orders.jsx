@@ -37,8 +37,12 @@ const Orders = () => {
   );
 
   return (
-    <div className="pb-4">
+    <div className="pb-4 max-w-3xl mx-auto lg:px-6">
       <MobileHeader title="My orders" hideSearch />
+      <div className="hidden lg:block mt-6 mb-4">
+        <h1 className="text-3xl font-extrabold">My orders</h1>
+        <p className="text-sm text-neutral-500 mt-1">Track and reorder previous purchases.</p>
+      </div>
       <div className="px-4 mt-3 space-y-2.5">
         {loading ? (
           <div className="py-10 text-center text-sm text-neutral-500">Loading…</div>

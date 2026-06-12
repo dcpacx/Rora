@@ -39,8 +39,11 @@ const Profile = () => {
   );
 
   return (
-    <div className="pb-4">
+    <div className="pb-4 max-w-2xl mx-auto lg:px-6">
       <MobileHeader title="Profile" hideSearch />
+      <div className="hidden lg:block mt-6 mb-2">
+        <h1 className="text-3xl font-extrabold">Profile</h1>
+      </div>
       <div className="px-4 mt-3">
         <div className="rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-500 text-white p-4 flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-white/15 grid place-items-center text-xl font-extrabold">{user.name.charAt(0).toUpperCase()}</div>

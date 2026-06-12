@@ -12,7 +12,7 @@ const MobileHeader = ({ title, back = false, hideSearch = false }) => {
 
   if (title || back) {
     return (
-      <div className="bg-white border-b border-neutral-100 px-4 h-14 flex items-center justify-between sticky top-0 z-30">
+      <div className="lg:hidden bg-white border-b border-neutral-100 px-4 h-14 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-2">
           {back && (
             <button onClick={() => navigate(-1)} className="-ml-2 w-9 h-9 grid place-items-center rounded-full hover:bg-neutral-100 transition-colors">
@@ -31,7 +31,7 @@ const MobileHeader = ({ title, back = false, hideSearch = false }) => {
   }
 
   return (
-    <div className="bg-emerald-600 text-white px-4 pt-3 pb-3 sticky top-0 z-30">
+    <div className="lg:hidden bg-emerald-600 text-white px-4 pt-3 pb-3 sticky top-0 z-30">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <MapPin className="w-3.5 h-3.5" />

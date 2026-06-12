@@ -22,6 +22,7 @@ export const AdminLayout = () => {
           <NavLink to="/admin" end className={link}><LayoutDashboard className="w-4 h-4" /> Dashboard</NavLink>
           <NavLink to="/admin/products" className={link}><Package className="w-4 h-4" /> Products</NavLink>
           <NavLink to="/admin/orders" className={link}><ClipboardList className="w-4 h-4" /> Orders</NavLink>
+          <NavLink to="/admin/users" className={link}><Users className="w-4 h-4" /> Customers</NavLink>
         </nav>
         <div className="mt-auto pt-4 border-t border-neutral-100">
           <div className="text-[11px] text-neutral-500 px-2">Signed in as</div>
@@ -39,6 +40,7 @@ export const AdminLayout = () => {
           <NavLink to="/admin" end className={({ isActive }) => `text-xs px-3 py-1.5 rounded-full whitespace-nowrap ${isActive ? 'bg-emerald-600 text-white' : 'bg-neutral-100 text-neutral-700'}`}>Dashboard</NavLink>
           <NavLink to="/admin/products" className={({ isActive }) => `text-xs px-3 py-1.5 rounded-full whitespace-nowrap ${isActive ? 'bg-emerald-600 text-white' : 'bg-neutral-100 text-neutral-700'}`}>Products</NavLink>
           <NavLink to="/admin/orders" className={({ isActive }) => `text-xs px-3 py-1.5 rounded-full whitespace-nowrap ${isActive ? 'bg-emerald-600 text-white' : 'bg-neutral-100 text-neutral-700'}`}>Orders</NavLink>
+          <NavLink to="/admin/users" className={({ isActive }) => `text-xs px-3 py-1.5 rounded-full whitespace-nowrap ${isActive ? 'bg-emerald-600 text-white' : 'bg-neutral-100 text-neutral-700'}`}>Customers</NavLink>
         </div>
         <div className="p-4 md:p-8 max-w-6xl">
           <Outlet />

@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { Protected } from './components/Protected';
 import BottomNav from './components/BottomNav';
+import DesktopNav from './components/DesktopNav';
 import Home from './pages/Home';
 import Categories from './pages/Categories';
 import CategoryPage from './pages/Category';
@@ -18,37 +19,38 @@ import { Login, Signup } from './pages/Auth';
 import { AdminLayout, AdminDashboard } from './pages/admin/Dashboard';
 import AdminProducts from './pages/admin/Products';
 import AdminOrders from './pages/admin/Orders';
+import AdminUsers from './pages/admin/Users';
 import { Toaster } from './components/ui/toaster';
 
-const PhoneShell = ({ children }) => {
+const Shell = ({ children }) => {
   const { pathname } = useLocation();
-  const hideNav = pathname.startsWith('/admin') || pathname === '/login' || pathname === '/signup' || pathname.startsWith('/product/');
+  const hideNav = pathname === '/login' || pathname === '/signup' || pathname.startsWith('/product/');
+  const hideDesktopNav = pathname === '/login' || pathname === '/signup';
   return (
-    <div className="phone-shell-outer">
-      <div className="phone-shell">
-        <div className="phone-shell-content">{children}</div>
-        {!hideNav && <BottomNav />}
-      </div>
+    <div className="app-shell">
+      {!hideDesktopNav && <DesktopNav />}
+      <div className="app-content">{children}</div>
+      {!hideNav && <BottomNav />}
     </div>
   );
 };
 
 const AppRoutes = () => {
   const { pathname } = useLocation();
-  // Admin routes use a full-screen layout, not the phone shell
-  if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
+  if (pathname.startsWith('/admin')) {
     return (
       <Routes>
         <Route path="/admin" element={<Protected adminOnly><AdminLayout /></Protected>}>
           <Route index element={<AdminDashboard />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="orders" element={<AdminOrders />} />
+          <Route path="users" element={<AdminUsers />} />
         </Route>
       </Routes>
     );
   }
   return (
-    <PhoneShell>
+    <Shell>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/categories" element={<Categories />} />
@@ -62,7 +64,7 @@ const AppRoutes = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
       </Routes>
-    </PhoneShell>
+    </Shell>
   );
 };
 

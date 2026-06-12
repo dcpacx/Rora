@@ -12,8 +12,11 @@ const CartPage = () => {
   const nav = useNavigate();
 
   return (
-    <div className="pb-32">
+    <div className="pb-32 lg:pb-12 max-w-3xl mx-auto lg:px-6">
       <MobileHeader title={`Cart (${cart.length})`} back />
+      <div className="hidden lg:block mt-6 mb-4">
+        <h1 className="text-3xl font-extrabold">Your cart ({cart.length})</h1>
+      </div>
       {cart.length === 0 ? (
         <div className="px-6 py-20 text-center">
           <div className="w-16 h-16 mx-auto rounded-full bg-emerald-50 grid place-items-center">
@@ -59,8 +62,13 @@ const CartPage = () => {
             </div>
           </div>
 
-          <div className="absolute bottom-16 inset-x-0 bg-white border-t border-neutral-100 px-4 py-3">
+          <div className="lg:hidden fixed bottom-16 inset-x-0 bg-white border-t border-neutral-100 px-4 py-3 z-30">
             <button onClick={() => nav(user ? '/checkout' : '/login?next=/checkout')} className="w-full h-12 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors">
+              Proceed to checkout · ৳{formatBDT(total)}
+            </button>
+          </div>
+          <div className="hidden lg:block max-w-7xl mx-auto px-6 mt-4">
+            <button onClick={() => nav(user ? '/checkout' : '/login?next=/checkout')} className="w-full lg:w-auto lg:px-8 h-12 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors">
               Proceed to checkout · ৳{formatBDT(total)}
             </button>
           </div>

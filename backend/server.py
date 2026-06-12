@@ -71,6 +71,7 @@ class ProductCreate(BaseModel):
     stock: int = 100
     organic: bool = True
     featured: bool = False
+    tags: Optional[List[str]] = []
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
@@ -85,6 +86,7 @@ class ProductUpdate(BaseModel):
     stock: Optional[int] = None
     organic: Optional[bool] = None
     featured: Optional[bool] = None
+    tags: Optional[List[str]] = None
 
 class OrderItem(BaseModel):
     productId: str
@@ -247,6 +249,7 @@ async def create_product(body: ProductCreate, admin = Depends(get_admin)):
         'stock': body.stock,
         'organic': body.organic,
         'featured': body.featured,
+        'tags': body.tags or [],
         'createdAt': datetime.utcnow().isoformat(),
     }
     await db.products.insert_one(product)
@@ -379,6 +382,32 @@ async def admin_stats(admin = Depends(get_admin)):
     async for d in cur: rev = d.get('total', 0)
     pending = await db.orders.count_documents({'status': 'pending'})
     return {'products': products, 'orders': orders, 'customers': customers, 'revenue': rev, 'pendingOrders': pending}
+
+
+@api.get('/admin/users')
+async def admin_users(admin = Depends(get_admin)):
+    users = await db.users.find({'role': 'customer'}).sort('createdAt', -1).to_list(500)
+    out = []
+    for u in users:
+        u.pop('_id', None); u.pop('password', None)
+        order_count = await db.orders.count_documents({'userId': u['id']})
+        pipeline = [{'$match': {'userId': u['id']}}, {'$group': {'_id': None, 'total': {'$sum': '$total'}}}]
+        spent = 0
+        async for d in db.orders.aggregate(pipeline): spent = d.get('total', 0)
+        u['orderCount'] = order_count
+        u['totalSpent'] = spent
+        out.append(u)
+    return out
+
+
+@api.get('/admin/users/{user_id}')
+async def admin_user_detail(user_id: str, admin = Depends(get_admin)):
+    u = await db.users.find_one({'id': user_id})
+    if not u: raise HTTPException(404, 'User not found')
+    u.pop('_id', None); u.pop('password', None)
+    orders = await db.orders.find({'userId': user_id}).sort('createdAt', -1).to_list(200)
+    for o in orders: o.pop('_id', None)
+    return {'user': u, 'orders': orders}
 
 
 # ------------ Seed ------------
