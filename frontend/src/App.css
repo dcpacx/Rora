@@ -1,0 +1,25 @@
+.App {
+  min-height: 100vh;
+  background: #ffffff;
+  color: #111;
+}
+
+/* Hide scrollbar for category strip */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Subtle product card hover */
+.product-card { transition: box-shadow 200ms ease, transform 200ms ease, border-color 200ms ease; }
+.product-card:hover { box-shadow: 0 8px 24px -10px rgba(0,0,0,0.15); transform: translateY(-2px); border-color: #e5e7eb; }
+
+/* Heart button */
+.wish-btn { transition: background-color 150ms ease, color 150ms ease, transform 150ms ease; }
+.wish-btn:hover { transform: scale(1.06); }
+
+/* Category pill hover */
+.cat-link { transition: color 150ms ease; }
+.cat-link:hover { color: #ef4444; }
+
+/* Marquee-ish smooth scroll for store chips */
+.chip { transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+.chip:hover { background-color: #fff; border-color: #d4d4d8; }
